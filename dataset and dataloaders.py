@@ -2,6 +2,8 @@
 Pytorch has two data primitives:
 a. torch.utils.data.DataLoader----------> DataLoader wraps an iterable around the dataset to enable easy access to the samples.
 b. torch.utils.data.Dataset------------->. Dataset stores the samples and their corresponding labels
+
+References: https://pytorch.org/tutorials/beginner/basics/data_tutorial.html
 """
 
 #loading the dataset from TorchVision
