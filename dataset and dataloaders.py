@@ -19,6 +19,9 @@ training_data= datasets.FashionMNIST(
     root= "data",   #root is the path where the train/test data is stored
     train=True,     #specifies training or testing data
     download=True,  #downloads the data from the internet if it's not available at root
+    
+    #ToTensor converts a PIL image or NumPy ndarray into a FloatTensor. and 
+    # scales the image’s pixel intensity values in the range [0., 1.]
     transform=ToTensor()  #specifies the features and label transformation
 )
 
