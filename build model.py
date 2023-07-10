@@ -57,3 +57,31 @@ class NeuralNetwork(nn.Module):
 model= NeuralNetwork().to(device)
 
 print(model)
+
+# Now we give input to the model . We shouldn't call models.forward() directly!!
+
+#callingthe model in the input returns a 2D tensor with dim=0 corresponding to each output of 10 raw predicted vlaues for each class
+# and dim=1 corresponding to the individual values of each output
+# We get the predicted probabilites by passing it through an instance of the nn.Softmax module.
+
+X= torch.rand(1, 28,28, device= device)
+
+logits= model(X)
+
+pred_probab= nn.Softmax(dim=1)(logits)
+y_pred= pred_probab.argmax(1)
+
+print(X)
+
+print(f"predicted class: {y_pred}")
+print(100* "--")
+
+# Using Fashion MNIST dataset for the model
+
+input_image= torch.rand(3, 28,28)  #sample minibatch of 3 images of size 28*28
+
+print(input_image.size())
+
+flatten= nn.Flatten()   # nn.Flatten convert each 2D 28*28 image into contiguos array of 784 pixel values
+flat_image= flatten(input_image)
+print(flat_image.size())
