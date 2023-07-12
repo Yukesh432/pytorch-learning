@@ -4,6 +4,10 @@ from torch.utils.data import DataLoader
 from torchvision import datasets
 from torchvision.transforms import ToTensor
 
+
+'''
+Reference: https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html
+'''
 training_data= datasets.FashionMNIST(
     root= "data",
     train=True,
@@ -47,4 +51,34 @@ learning_rate = 1e-3
 batch_size = 64
 epochs = 5
 
+#loss Function: It measures the difference in predicted value and actual value of the predicted answer
+#Eg. Mean sqare error (nn.MSELoss), negative log likelihood(nn.NLLLoss)
+# nn.CrossEntropyLoss combines nn.LogSoftmax and nn.LLLoss
 
+# we pass our model output logits to the crossentropy loss which will noralize the logits and compute the prediction error
+losss= nn.CrossEntropyLoss()
+
+# now we initialize the optimizer
+optimizer= torch.optim.SGD(model.parameters(), lr= learning_rate)
+
+
+#we define the train_loop that loops over our optimization code 
+
+def train_loop(dataloader, model, loss_fn, optimizer):
+    size = len(dataloader.dataset)
+    # Set the model to training mode - important for batch normalization and dropout layers
+    # Unnecessary in this situation but added for best practices
+    model.train()
+    for batch, (X, y) in enumerate(dataloader):
+        # Compute prediction and loss
+        pred = model(X)
+        loss = loss_fn(pred, y)
+
+        # Backpropagation
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        if batch % 100 == 0:
+            loss, current = loss.item(), (batch + 1) * len(X)
+            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
