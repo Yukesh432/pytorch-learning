@@ -25,7 +25,7 @@ test_data= datasets.FashionMNIST(
 train_dataloader= DataLoader(training_data, batch_size=64)
 test_dataloader= DataLoader(test_data, batch_size=64)
 
-class NeuralNetwork(nn.modules):
+class NeuralNetwork(nn.Module):
     def __init__(self):
         super().__init__()
         self.flatten= nn.Flatten()
@@ -65,20 +65,49 @@ optimizer= torch.optim.SGD(model.parameters(), lr= learning_rate)
 #we define the train_loop that loops over our optimization code 
 
 def train_loop(dataloader, model, loss_fn, optimizer):
-    size = len(dataloader.dataset)
+    size = len(dataloader.dataset)   # Total number of samples in the dataset
     # Set the model to training mode - important for batch normalization and dropout layers
     # Unnecessary in this situation but added for best practices
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         # Compute prediction and loss
-        pred = model(X)
-        loss = loss_fn(pred, y)
+        pred = model(X)    # Forward pass to get model predictions
+        loss = loss_fn(pred, y)   # Compute the loss
 
-        # Backpropagation
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
+        loss.backward()    # Backpropagation to compute gradients
+        optimizer.step()   # Update the model parameters
+        optimizer.zero_grad()   # Reset the gradients to zero
 
         if batch % 100 == 0:
             loss, current = loss.item(), (batch + 1) * len(X)
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+
+
+def test_loop(dataloader, model, loss_fn):
+
+    #setting the model for evaluation mode. important for batch normalization and dropout layer
+    #not necessary in this situation , but best practise
+    model.eval()
+    size= len(dataloader.dataset)
+    num_batches= len(dataloader)
+    test_loss, correct= 0, 0
+
+    with torch.no_grad():
+        for X, y in dataloader:
+            pred= model(X)
+            test_loss += loss_fn(pred, y).item()
+            correct += (pred.argmax(1)==y).type(torch.float).sum().item()    # Count the correct predictions
+
+    test_loss= test_loss/num_batches   #Average test loss
+    correct= correct/size              #Accuracy
+    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+
+loss_fn = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+
+epochs = 10
+for t in range(epochs):
+    print(f"Epoch {t+1}\n-------------------------------")
+    train_loop(train_dataloader, model, loss_fn, optimizer)
+    test_loop(test_dataloader, model, loss_fn)
+print("Done!")
