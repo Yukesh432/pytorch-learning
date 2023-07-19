@@ -10,6 +10,8 @@ import torch.nn.functional as F
         i. layers which have learable parameter in NN(eg. convolution layer, linear layer, etc)
         ii. registered buffers(batchnorm's running mean)
 - optimizer object also have state_dict which stores info about optimizer state and hyperparameters
+
+Reference: https://pytorch.org/tutorials/recipes/recipes/what_is_state_dict.html
 """
 
 # Defining and intializing neural network
