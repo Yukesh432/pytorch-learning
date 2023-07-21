@@ -42,7 +42,7 @@ def matplotlib_image(img, one_channel= False):
 
 #defining model architecture
 
-class Net(nn.modules):
+class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         #input channel: 1, output channel: 6, kernel size: 5*5
@@ -64,4 +64,30 @@ class Net(nn.modules):
     
 
 net= Net()
+
+#defining optimizer and criteron
+criterion= nn.CrossEntropyLoss()
+optimizer= optim.SGD(net.parameters(), lr= 0.001, momentum=0.9)
+
+#tensorboard setup
+
+from torch.utils.tensorboard import SummaryWriter
+
+writer= SummaryWriter('runs/fashion_mnist_experiment_1')
+
+#Writing to TensorBoard
+
+#getting some random training images
+dataiter= iter(train_loader)
+
+images, labels= next(dataiter)
+
+#creating a grid of images
+img_grid= torchvision.utils.make_grid(images)
+
+#showing images
+matplotlib_image(img_grid, one_channel=True)
+
+
+
 
