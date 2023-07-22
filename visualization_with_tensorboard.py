@@ -9,7 +9,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-torch.manual_seed(13)
+
+# Reference: https://pytorch.org/tutorials/intermediate/tensorboard_tutorial.html
 
 #transforms
 transform= transforms.Compose(
@@ -22,11 +23,11 @@ training_data= torchvision.datasets.FashionMNIST('./data', download=True, train=
 testing_data= torchvision.datasets.FashionMNIST('./data', download=True, train=False, transform=transform)
 
 #dataloaders
-train_loader= DataLoader(training_data, batch_size= 4, shuffle= True, num_workers= 2)
-test_loader= DataLoader(testing_data, batch_size=4, shuffle=False, num_workers=2)
+train_loader= DataLoader(training_data, batch_size= 4, shuffle= True)
+test_loader= DataLoader(testing_data, batch_size=4, shuffle=False)
 
 #Output labels for classes
-classes= ('T-shirt/Top', 'Trouser', 'Pullover', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag')
+classes= ('T-shirt/Top', 'Trouser', 'Pullover', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle Boot')
 
 #helper function to show an image
 def matplotlib_image(img, one_channel= False):
@@ -88,6 +89,72 @@ img_grid= torchvision.utils.make_grid(images)
 #showing images
 matplotlib_image(img_grid, one_channel=True)
 
+#write to tensorboard
+writer.add_image('four_fashion_mnist_images', img_grid)
 
 
 
+writer.add_graph(net, images)
+writer.close()
+
+#tracking model training with Tensorboard
+
+#helper function
+
+def images_to_probs(net, images):
+    '''Generate predictions and corresponding probabilites from a trained network and a list of images'''
+
+    output= net(images)
+    # convert the output  probabilites to predicted class
+    _, preds_tensor= torch.max(output,1)
+    preds= np.squeeze(preds_tensor.numpy())
+    return preds, [F.softmax(el, dim=0)[i].item() for i, el in zip(preds, output)]
+
+def plot_classes_preds(net, images, labels):
+
+    preds, probs = images_to_probs(net, images)
+    # plot the images in the batch, along with predicted and true labels
+    fig = plt.figure(figsize=(12, 48))
+    for idx in np.arange(4):
+        ax = fig.add_subplot(1, 4, idx+1, xticks=[], yticks=[])
+        matplotlib_image(images[idx], one_channel=True)
+        ax.set_title("{0}, {1:.1f}%\n(label: {2})".format(
+            classes[preds[idx]],
+            probs[idx] * 100.0,
+            classes[labels[idx]]),
+                    color=("green" if preds[idx]==labels[idx].item() else "red"))
+    return fig
+
+
+running_loss = 0.0
+for epoch in range(1):  # loop over the dataset multiple times
+
+    for i, data in enumerate(train_loader, 0):
+
+        # get the inputs; data is a list of [inputs, labels]
+        inputs, labels = data
+
+        # zero the parameter gradients
+        optimizer.zero_grad()
+
+        # forward + backward + optimize
+        outputs = net(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item()
+        if i % 1000 == 999:    # every 1000 mini-batches...
+
+            # ...log the running loss
+            writer.add_scalar('training loss',
+                            running_loss / 1000,
+                            epoch * len(train_loader) + i)
+
+            # ...log a Matplotlib Figure showing the model's predictions on a
+            # random mini-batch
+            writer.add_figure('predictions vs. actuals',
+                            plot_classes_preds(net, inputs, labels),
+                            global_step=epoch * len(train_loader) + i)
+            running_loss = 0.0
+print('Finished Training')
