@@ -1,4 +1,6 @@
 # TorchVision object detection Finetuning
+# References: https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html
+
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,7 +11,7 @@ import torch
 class PennFudanDataset(Dataset):
     def __init__(self, root, transforms):
         self.root= root
-        self.trasnforms= transforms
+        self.transforms= transforms
         # loading all image files adn sorting them, ensuring that they are aligned
         self.imgs= list(sorted(os.listdir(os.path.join(root, "PNGImages"))))
         self.masks= list(sorted(os.listdir(os.path.join(root, "PedMasks"))))
@@ -56,4 +58,17 @@ class PennFudanDataset(Dataset):
         iscrowd= torch.zeros((num_objs,), dtype= torch.int64)
 
         target= {}
-        
+        target["boxes"]= boxes
+        target["labels"]= labels
+        target["masks"]= masks
+        target["image_id"]= image_id
+        target["area"]= area
+        target["iscrowd"]= iscrowd
+
+        if self.transforms is not None:
+            img, target= self.transforms(img, target)
+
+        return img, target
+    
+    def __len__(self):
+        return len(self.imgs)
