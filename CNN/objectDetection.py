@@ -17,17 +17,17 @@ class PennFudanDataset(Dataset):
         self.masks= list(sorted(os.listdir(os.path.join(root, "PedMasks"))))
 
     def __getitem__(self, idx):
-        # load images and masks
+        # get the idx-th image and mask paths from the lists
         img_path= os.path.join(self.root, "PNGImages", self.imgs[idx])
         mask_path= os.path.join(self.root, "PedMasks", self.masks[idx])
+        # open the image in RGB model using PIL
         img= Image.open(img_path).convert("RGB")
-        """Here we havent converted the mask to RGB, because each color corresponds
-        to different instance with 0 being background"""
-
+        """The masks are not converted to RGB because each color corresponding to a different instance (0 being background)"""
         mask= Image.open(mask_path)
         # convert the PIL image into numpy array
         mask= np.array(mask)
         # instances are enoded as differenct colors
+        # get unique object ids from the mask, as each color represents a different instance
         obj_ids= np.unique(mask)
         # first id is the background, so removing it..
         obj_ids= obj_ids[1:]
@@ -46,12 +46,12 @@ class PennFudanDataset(Dataset):
             ymax= np.max(pos[0])
             boxes.append([xmin, ymin, xmax, ymax])
 
-        # convert all data into tensor type
+        # convert bounding box data and masks into tensor type
         boxes= torch.as_tensor(boxes, dtype=torch.float32)
         labels= torch.ones((num_objs,), dtype=torch.int64)
         masks= torch.as_tensor(masks, dtype= torch.uint8)
 
-
+        # target information
         image_id= torch.tensor([idx])
         area= (boxes[:,3]- boxes[:, 1]) * (boxes[:,2]- boxes[:,0])
         # suppose all isntances are not crowd
@@ -65,10 +65,12 @@ class PennFudanDataset(Dataset):
         target["area"]= area
         target["iscrowd"]= iscrowd
 
+        # apply the specified transformations to the image and target data
         if self.transforms is not None:
             img, target= self.transforms(img, target)
 
         return img, target
     
     def __len__(self):
+        # returns the total number of images in the dataset
         return len(self.imgs)
