@@ -9,6 +9,11 @@ from torch.utils.data import Dataset
 import torch
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection import FasterRCNN
+from torchvision.models.detection.rpn import AnchorGenerator
+from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
+from torchvision import transforms as T
+
 
 class PennFudanDataset(Dataset):
     def __init__(self, root, transforms):
@@ -81,14 +86,57 @@ class PennFudanDataset(Dataset):
 
 # Finetuning from pretrained model.............
 
-# loading model pre-trained on COCO
-model= torchvision.models.detection.fasterrcnn_resnet50_fpn(weights= "DEFAULT")
-# replacing the classifier with a new one, that has num_classes which is user-defined
-num_classes= 2   # 1 class(person) + background
-# get no. of input features for the classifier
-in_features= model.roi_heads.box_predictor.cls_score.in_features
-# replace the pretraiined head with a new one
-model.roi_heads.box_predictor= FastRCNNPredictor(in_features, num_classes)
+# # loading model pre-trained on COCO
+# model= torchvision.models.detection.fasterrcnn_resnet50_fpn(weights= "DEFAULT")
+# # replacing the classifier with a new one, that has num_classes which is user-defined
+# num_classes= 2   # 1 class(person) + background
+# # get no. of input features for the classifier
+# in_features= model.roi_heads.box_predictor.cls_score.in_features
+# # replace the pretraiined head with a new one
+# model.roi_heads.box_predictor= FastRCNNPredictor(in_features, num_classes)
+
+def get_model_instance_segmentation(num_classes):
+    # load an instance segmentation model pretrained on COCO
+    model= torchvision.models.detection.maskrcnn_resnet50_fpn(weights="DEFAULT")
+    # get number of input features for the classifier
+    in_features= model.roi_heads.box_predictor.cls_score.in_features
+    # replace the pretrained head with a new one
+    model.roi_heads.box_predictor= FastRCNNPredictor(in_features, num_classes)
+    
+    # now get the number of input features for the mask classifier
+    in_features_mask= model.roi_heads.mask_predictor.conv5_mask.in_channels
+    hidden_layer= 256
+
+    # and replacing the mask predictor with new one
+    model.roi_heads.mask_predictor= MaskRCNNPredictor(in_features_mask, hidden_layer, num_classes)
+
+    return model
 
 
+def get_transform(train):
+    transforms= []
+    transforms.append(T.PILToTensor())
+    transforms.append(T.ConvertImageDtype(torch.float))
+    if train:
+        transforms.append(T.RandomHorizontalFlip(0.5))
+    return T.Compose(transforms)
 
+
+#Function for training and the validation
+def main():
+    # training on the GPU or the CPU
+    device= torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
+    # our dataset has two classes only,, i.e 1. Background 2. Person
+    num_classes= 2
+    # using our dataset and defined transformations
+    dataset= PennFudanDataset('PennFudanPed', get_transform(train=True))
+    dataset_test= PennFudanDataset('PennFudanPed', get_transform(train=False))
+
+    # split the dataset in train and test set
+    indices= torch.randperm(len(dataset)).tolist()
+    dataset= torch.utils.data.Subset(dataset, indices[:-50])
+    dataset_test= torch.utils.data.Subset(dataset_test, indices[-50:])
+
+    #defining training and validation data loader
+    
