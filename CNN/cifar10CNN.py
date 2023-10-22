@@ -47,7 +47,7 @@ if __name__ == '__main__':
     training_losses = []
 
     # Train the model
-    for epoch in range(5):  # You can increase the number of epochs
+    for epoch in range(50):  # You can increase the number of epochs
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             inputs, labels = data
