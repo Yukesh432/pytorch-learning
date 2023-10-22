@@ -38,7 +38,13 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
                                           shuffle=True, num_workers=2)
 
 # Define a loss function and optimizer
+# Check if GPU is available and set the device accordingly
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 net = Net()
+# Move the model and data to the chosen device
+net.to(device)
+
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
