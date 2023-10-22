@@ -81,4 +81,4 @@ if __name__ == '__main__':
     plt.show()
 
     # You can save the trained model
-    # torch.save(net.state_dict(), 'cifar10_net.pth')
+    torch.save(net.state_dict(), 'cifar10_net.pth')
