@@ -36,6 +36,7 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
 
 # Define a loss function and optimizer
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cpu")
 
 net = Net()
 net.to(device)
