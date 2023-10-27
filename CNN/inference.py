@@ -21,7 +21,8 @@ class Net(nn.Module):
     
 
 # Load your pre-trained model
-model = torch.load('cifar10_net_ann_full.pth')  # Replace with the path to your model
+# model = torch.load('cifar10_net_ann_full.pth')  # Replace with the path to your model
+model = torch.load('cifar10_net_ann_full_cpu.pth')  # Replace with the path to your model
 
 # Set the model to evaluation mode
 model.eval()
@@ -34,13 +35,14 @@ transform = transforms.Compose([
 ])
 
 # Load your image (replace with your own data loading logic)
-image = Image.open('OIP.jfif').convert('RGB')
+image = Image.open('ss.jpg').convert('RGB')
 image = image.resize((32, 32))
 
 input_data = transform(image).unsqueeze(0)  # Add a batch dimension
 
 # Move the input data to the same device as the model (CPU or GPU)
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device= torch.device("cpu")
 input_data = input_data.to(device)
 
 # Make predictions
