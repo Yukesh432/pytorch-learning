@@ -88,3 +88,20 @@ if __name__ == '__main__':
     # You can save the trained model
     # torch.save(net.state_dict(), 'cifar10_net_ann.pth')
     torch.save(net, 'cifar10_net_ann_full_cpu.pth')
+
+    """
+Model Saving Methods in PyTorch:
+
+a. `torch.save(net.state_dict(), 'cifar10_net.pth')`:
+   - This method saves only the model's state dictionary, which includes learnable parameters.
+   - It does not save the model architecture.
+   - When loading the model, you must define the architecture and load the state dictionary into the model.
+
+b. `torch.save(net, 'cifar10_net.pth')`:
+   - This method saves the entire model, including both the architecture and model parameters.
+   - It is convenient for saving and using the complete model without the need to redefine the architecture.
+   - Useful for continued training or inference without redefining the model.
+
+Choose the appropriate method based on your use case.
+"""
+
