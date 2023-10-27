@@ -37,6 +37,11 @@ trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
                                           shuffle=True, num_workers=2)
 
+valset = torchvision.datasets.CIFAR10(root='./data', train=False,
+                                      download=True, transform=transform)
+valloader = torch.utils.data.DataLoader(valset, batch_size=4,
+                                        shuffle=False, num_workers=2)
+
 # Define a loss function and optimizer
 # Check if GPU is available and set the device accordingly
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -51,12 +56,16 @@ optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 if __name__ == '__main__':
     # Create empty lists to store the loss values
     training_losses = []
+    val_accuracies = []
 
     # Train the model
     for epoch in range(50):  # You can increase the number of epochs
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             inputs, labels = data
+
+            inputs, labels = inputs.to(device), labels.to(device)
+
 
             optimizer.zero_grad()
 
@@ -70,6 +79,20 @@ if __name__ == '__main__':
                 print(f'[{epoch + 1}, {i + 1}] loss: {running_loss / 2000:.3f}')
                 training_losses.append(running_loss / 2000)
                 running_loss = 0.0
+     # Validation accuracy tracking
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for data in valloader:
+                images, labels = data
+                images, labels = images.to(device), labels.to(device)
+                outputs = net(images)
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+        val_accuracy = 100 * correct / total
+        val_accuracies.append(val_accuracy)
+        print(f'Validation accuracy for epoch {epoch + 1}: {val_accuracy:.2f}%')
 
     print('Finished Training')
 
