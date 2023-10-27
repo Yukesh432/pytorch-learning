@@ -35,8 +35,8 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
                                           shuffle=True, num_workers=2)
 
 # Define a loss function and optimizer
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-# device = torch.device("cpu")
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 
 net = Net()
 net.to(device)
@@ -87,3 +87,4 @@ if __name__ == '__main__':
 
     # You can save the trained model
     # torch.save(net.state_dict(), 'cifar10_net_ann.pth')
+    torch.save(net, 'cifar10_net_ann_full_cpu.pth')
