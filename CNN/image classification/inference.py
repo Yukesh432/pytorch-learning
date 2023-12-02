@@ -26,12 +26,12 @@ def predict(model, image_path, class_names):
     return class_names[predicted.item()]
 
 class_names = {
-    0: 'mountain',
-    1: 'street',
-    2: 'forest',
-    3: 'buildings',
+    0: 'building',
+    1: 'forest',
+    2: 'glacier',
+    3: 'mountain',
     4: 'sea',
-    5: 'glacier'
+    5: 'street'
 }
 # Usage
 model_path = 'natural_scene_classification.pth'
