@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+from utils import fit, evaluate, accuracy
 
 class ImageClassificationBase(nn.Module):
     # ... [existing methods]
@@ -8,6 +9,7 @@ class ImageClassificationBase(nn.Module):
         images, labels = batch 
         out = self(images)                  # Generate predictions
         loss = F.cross_entropy(out, labels) # Calculate loss
+        print("............................................................")
         return loss
     
     def validation_step(self, batch):
@@ -15,6 +17,7 @@ class ImageClassificationBase(nn.Module):
         out = self(images)                    # Generate predictions
         loss = F.cross_entropy(out, labels)   # Calculate loss
         acc = accuracy(out, labels)           # Calculate accuracy
+        print("///////////////////////////////////////////////////")
         return {'val_loss': loss.detach(), 'val_acc': acc}
         
     def validation_epoch_end(self, outputs):
@@ -46,16 +49,17 @@ class NaturalSceneClassification(ImageClassificationBase):
             nn.ReLU(),
             nn.MaxPool2d(2,2),
             
-            nn.Conv2d(128, 256, kernel_size = 3, stride = 1, padding = 1),
-            nn.ReLU(),
-            nn.Conv2d(256,256, kernel_size = 3, stride = 1, padding = 1),
-            nn.ReLU(),
-            nn.MaxPool2d(2,2),
+            # nn.Conv2d(128, 256, kernel_size = 3, stride = 1, padding = 1),
+            # nn.ReLU(),
+            # nn.Conv2d(256,256, kernel_size = 3, stride = 1, padding = 1),
+            # nn.ReLU(),
+            # nn.MaxPool2d(2,2),
             
             nn.Flatten(),
-            nn.Linear(82944,1024),
-            nn.ReLU(),
-            nn.Linear(1024, 512),
+            # nn.Linear(82944,1024),
+            # nn.ReLU(),
+            # nn.Linear(1024, 512),
+            nn.Linear(37*37*128, 512),
             nn.ReLU(),
             nn.Linear(512,6)
         )
