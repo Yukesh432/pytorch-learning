@@ -32,10 +32,10 @@ out_device = cuda.device_array_like(x)
 threadsperblock = 128
 blockspergrid = (x.size + (threadsperblock - 1)) // threadsperblock
 
-# Start the kernel 
-add_kernelblockspergrid, threadsperblock
+# # Start the kernel 
+# add_kernelblockspergrid, threadsperblock
 
-# Copy the result back to the host
-out_device.copy_to_host(out)
+# # Copy the result back to the host
+# out_device.copy_to_host(out)
 
-print(out[:10])  # print the first 10 elements of the result
+# print(out[:10])  # print the first 10 elements of the result
