@@ -38,8 +38,8 @@ def infer(model, test_loader, device):
     return results
 
 def main():
-    model_path = 'C:/Users/AIXI/OneDrive/Desktop/projects/fire-detection/fire_detection_model.pth'
-    test_dir = 'C:/Users/AIXI/OneDrive/Desktop/projects/fire-detection/testimage'
+    model_path = 'path'
+    test_dir = 'path'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     model = load_model(model_path)
