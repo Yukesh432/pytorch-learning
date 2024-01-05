@@ -1,4 +1,10 @@
 import wikidata, model
+import torch
+
+
+# Check for GPU availability
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Training on: {device}")
 
 # Load the data
 file_path = 'wiki.train.raw'
@@ -49,4 +55,4 @@ data_loader = model.create_data_loader(input_tensors, target_tensors, batch_size
 
 print("Training Starts......................................")
 # Train the Model
-model.train_model(lstm_model, data_loader, learning_rate, num_epochs)
+model.train_model(lstm_model, data_loader, learning_rate, num_epochs, device)
