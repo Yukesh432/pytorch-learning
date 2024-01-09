@@ -25,6 +25,12 @@ def evaluate_perplexity(model, data_loader, device):
     perplexity = math.exp(total_loss / len(data_loader.dataset))
     return perplexity
 
+def tokens_to_indices_handling_oov(tokens, token_to_index):
+    # Choose a token to represent OOV words
+    oov_token = next(iter(token_to_index))  # Example: use the first token in the dictionary
+    return [token_to_index.get(token, token_to_index[oov_token]) for token in tokens]
+
+
 # Load the token_to_index and index_to_token mappings
 with open('token_to_index.pkl', 'rb') as f:
     token_to_index = pickle.load(f)
@@ -33,7 +39,11 @@ with open('token_to_index.pkl', 'rb') as f:
 eval_file_path = 'wiki.valid.raw'  # Replace with your evaluation file path
 eval_text = wikidata.load_data(eval_file_path)
 eval_tokens = wikidata.tokenize_text(eval_text, use_nltk=True)
-eval_token_indices = wikidata.tokens_to_indices(eval_tokens, token_to_index)
+
+# eval_token_indices = wikidata.tokens_to_indices(eval_tokens, token_to_index)
+# Instead of the regular tokens_to_indices, use the OOV handling version
+eval_token_indices = tokens_to_indices_handling_oov(eval_tokens, token_to_index)
+
 seq_length = 30  # Should be same as used during training
 eval_sequences = wikidata.create_sequences(eval_token_indices, seq_length)
 eval_inputs, eval_targets = wikidata.prepare_training_data(eval_sequences, seq_length)
@@ -54,5 +64,6 @@ lstm_model = load_model(model_path, vocab_size, embedding_dim, hidden_size, num_
 eval_data_loader = model.create_data_loader(eval_input_tensors, eval_target_tensors, batch_size=64)
 
 # Evaluate the model and print perplexity
+print("Calculating perplexity................................................")
 perplexity = evaluate_perplexity(lstm_model, eval_data_loader, device)
 print(f"Perplexity on evaluation data: {perplexity}")
