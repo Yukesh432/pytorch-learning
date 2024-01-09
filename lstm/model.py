@@ -67,20 +67,20 @@ def train_model(model, data_loader, learning_rate, num_epochs, device):
         average_loss = total_loss / len(data_loader)
         print(f'Epoch [{epoch+1}/{num_epochs}], Average Loss: {average_loss}')
 
-def evaluate_model(model, data_loader, device):
-    model.eval()  # Set the model to evaluation mode
-    criterion = nn.CrossEntropyLoss()
-    total_loss = 0
-    total_count = 0
+# def evaluate_model(model, data_loader, device):
+#     model.eval()  # Set the model to evaluation mode
+#     criterion = nn.CrossEntropyLoss()
+#     total_loss = 0
+#     total_count = 0
 
-    with torch.no_grad():
-        for inputs, targets in data_loader:
-            inputs, targets = inputs.to(device), targets.to(device)
-            outputs = model(inputs)
-            loss = criterion(outputs.view(-1, model.vocab_size), targets.view(-1))
-            total_loss += loss.item() * inputs.size(0)
-            total_count += inputs.size(0)
+#     with torch.no_grad():
+#         for inputs, targets in data_loader:
+#             inputs, targets = inputs.to(device), targets.to(device)
+#             outputs = model(inputs)
+#             loss = criterion(outputs.view(-1, model.vocab_size), targets.view(-1))
+#             total_loss += loss.item() * inputs.size(0)
+#             total_count += inputs.size(0)
 
-    average_loss = total_loss / total_count
-    perplexity = math.exp(average_loss)
-    return perplexity
+#     average_loss = total_loss / total_count
+#     perplexity = math.exp(average_loss)
+#     return perplexity
