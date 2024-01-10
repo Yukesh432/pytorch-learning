@@ -36,8 +36,10 @@ with open('token_to_index.pkl', 'rb') as f:
     token_to_index = pickle.load(f)
 
 # Load and preprocess the evaluation data
-eval_file_path = 'wiki.valid.raw'  # Replace with your evaluation file path
-eval_text = wikidata.load_data(eval_file_path)
+# eval_file_path = 'wiki.valid.raw'  # Replace with your evaluation file path
+train_file_path= 'wiki.train.raw'
+# eval_text = wikidata.load_data(eval_file_path)
+eval_text= wikidata.load_data(train_file_path)
 eval_tokens = wikidata.tokenize_text(eval_text, use_nltk=True)
 
 # eval_token_indices = wikidata.tokens_to_indices(eval_tokens, token_to_index)
@@ -64,6 +66,6 @@ lstm_model = load_model(model_path, vocab_size, embedding_dim, hidden_size, num_
 eval_data_loader = model.create_data_loader(eval_input_tensors, eval_target_tensors, batch_size=64)
 
 # Evaluate the model and print perplexity
-print("Calculating perplexity................................................")
+print("Calculating perplexity on train data................................................")
 perplexity = evaluate_perplexity(lstm_model, eval_data_loader, device)
 print(f"Perplexity on evaluation data: {perplexity}")
