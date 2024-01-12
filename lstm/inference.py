@@ -51,19 +51,19 @@ def generate_text(model, start_prompt, token_to_index, index_to_token, gen_lengt
 
 
 # Model Hyperparameters (should match training configuration)
-vocab_size = 76538  # Replace with your actual vocab size
-# vocab_size= 36998
+# vocab_size = 76538  # Replace with your actual vocab size
+vocab_size= 36998
 embedding_dim = 256
 hidden_size = 256
-num_layers = 2
+num_layers = 5
 seq_length=30
-model_path = 'trained_lstm_model2.pth'
+model_path = 'trained_lstm_model_checkpoint_epoch_3.pth'
 
 # Load token_to_index and index_to_token
-with open('token_to_index.pkl', 'rb') as f:
+with open('bpe_token_to_index.pkl', 'rb') as f:
     token_to_index = pickle.load(f)
 
-with open('index_to_token.pkl', 'rb') as f:
+with open('bpe_index_to_token.pkl', 'rb') as f:
     index_to_token = pickle.load(f)
 
 # Load the trained model
