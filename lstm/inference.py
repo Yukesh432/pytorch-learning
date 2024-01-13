@@ -13,7 +13,7 @@ def load_model(model_path, vocab_size, embedding_dim, hidden_size, num_layers):
 
 def tokenize_input(input_text, token_to_index):
     # Tokenize the input text and convert to indices
-    tokens = wikidata.tokenize_text(input_text, use_nltk=True)
+    tokens = wikidata.tokenize_text(input_text)
     token_indices = [token_to_index.get(token, 0) for token in tokens]  # Unknown tokens as 0
     return token_indices
 
@@ -57,7 +57,8 @@ embedding_dim = 256
 hidden_size = 256
 num_layers = 5
 seq_length=30
-model_path = 'trained_lstm_model_checkpoint_epoch_3.pth'
+model_path = './constanlr_ckpts/oov_trained_lstm_model.pth'
+# model_path = 'trained_lstm_model_checkpoint_epoch_6.pth'
 
 # Load token_to_index and index_to_token
 with open('bpe_token_to_index.pkl', 'rb') as f:
@@ -74,12 +75,15 @@ lstm_model = load_model(model_path, vocab_size, embedding_dim, hidden_size, num_
 # input_text = "Kennedy is the president of: "
 # input_text= "The game takes place"
 # input_text= " As with previous Valkyira Chronicles"
-input_text= "this"
+# input_text= "this"
+# input_text= "Valkyria Chronicles III is a tactical"
+input_text= "The majority of material created"
 
 gen_length=50
 generated_text = generate_text(lstm_model, input_text, token_to_index, index_to_token, gen_length, seq_length)
+cleaned_text = generated_text.replace(' Ġ', ' ')  # Replace ' Ġ' with a space
 
-print("Generated text:", generated_text)
+print("Generated text:", cleaned_text)
 # input_indices = tokenize_input(input_text, token_to_index)  # token_to_index from your training script
 
 # Predict the next 5 tokens
