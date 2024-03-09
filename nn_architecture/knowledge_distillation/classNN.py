@@ -17,19 +17,38 @@ class NeuralNetwork:
         self.parameters = self.initialize_network(n_x, n_h, n_y, initialization_method)
     
     def initialize_network(self, n_x, n_h, n_y, initialization_method):
-        np.random.seed(2)
-        if initialization_method == 'he':
-            w1 = np.random.randn(n_h, n_x) * np.sqrt(2. / n_x)
-            w2 = np.random.randn(n_y, n_h) * np.sqrt(2. / n_h)
-        elif initialization_method == 'xavier':
-            w1 = np.random.randn(n_h, n_x) * np.sqrt(1. / n_x)
-            w2 = np.random.randn(n_y, n_h) * np.sqrt(1. / n_h)
-        else:  # default or 'random' initialization
-            w1 = np.random.randn(n_h, n_x) * 0.01
-            w2 = np.random.randn(n_y, n_h) * 0.01
-        b1 = np.zeros((n_h, 1))
-        b2 = np.zeros((n_y, 1))
-        return {"W1": w1, "b1": b1, "W2": w2, "b2": b2}
+            """
+            Initializes the parameters of the neural network.
+
+            Parameters:
+            -----------
+            n_x : int
+                Number of input features.
+            n_h : int
+                Number of hidden units.
+            n_y : int
+                Number of output units.
+            initialization_method : str
+                Method used for weight initialization ('random', 'he', or 'xavier').
+
+            Returns:
+            --------
+            parameters : dict
+                Dictionary containing the initialized parameters of the neural network.
+            """
+            np.random.seed(2)
+            if initialization_method == 'he':
+                w1 = np.random.randn(n_h, n_x) * np.sqrt(2. / n_x)
+                w2 = np.random.randn(n_y, n_h) * np.sqrt(2. / n_h)
+            elif initialization_method == 'xavier':
+                w1 = np.random.randn(n_h, n_x) * np.sqrt(1. / n_x)
+                w2 = np.random.randn(n_y, n_h) * np.sqrt(1. / n_h)
+            else:  # default or 'random' initialization
+                w1 = np.random.randn(n_h, n_x) * 0.01
+                w2 = np.random.randn(n_y, n_h) * 0.01
+            b1 = np.zeros((n_h, 1))
+            b2 = np.zeros((n_y, 1))
+            return {"W1": w1, "b1": b1, "W2": w2, "b2": b2}
 
     def activation_function(self, z):
         if self.activation_function_name == 'relu':
