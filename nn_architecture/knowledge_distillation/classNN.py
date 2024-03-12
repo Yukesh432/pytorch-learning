@@ -18,6 +18,7 @@ class NeuralNetwork:
         self.activation_function_name = activation_function
         self.initialization_method = initialization_method
         self.parameters = self.initialize_network(n_x, n_h, n_y, initialization_method)
+
     
     def initialize_network(self, n_x, n_h, n_y, initialization_method):
         np.random.seed(2)
@@ -114,6 +115,14 @@ class NeuralNetwork:
         train_losses, test_losses, accuracies = [], [], []
         best_test_loss = np.inf
         no_improve_counter = 0
+        model_details = {
+            'learning_rate': learning_rate,
+            'num_iterations': num_iterations,
+            'initialization_method': initialization_method,
+            'n_h': n_h,
+            'optimizer': optimizer,
+            'batch_size': batch_size
+    }
 
         for epoch in tqdm(range(num_iterations)):
             train_loss_accum = 0
@@ -141,7 +150,7 @@ class NeuralNetwork:
             train_accuracy = correct_preds_epoch / total_preds_epoch * 100
             train_losses.append(train_loss_avg)
 
-            test_loss, test_accuracy = self.evaluate(testloader)
+            test_loss, test_accuracy = self.evaluate(testloader, model_details)
             test_losses.append(test_loss)
             accuracies.append(test_accuracy)
 
@@ -158,9 +167,9 @@ class NeuralNetwork:
             if print_cost:
                 print(f"Epoch {epoch} | Train Loss: {train_loss_avg:.4f} | Train Accuracy: {train_accuracy:.2f}% | Test Loss: {test_loss:.4f} | Test Accuracy: {test_accuracy:.2f}%")
 
-        return train_losses, test_losses, accuracies
+        return train_losses, test_losses, accuracies, model_details
 
-    def evaluate(self, dataloader, model_details= None):
+    def evaluate(self, dataloader, model_details):
         test_loss_accum = 0
         correct_preds = 0
         total_preds = 0
@@ -231,7 +240,7 @@ if __name__ == "__main__":
     n_h = 64
     n_y = 10
     learning_rate = 0.01
-    activation_function = 'relu'
+    activation_function = 'sigmoid'
     initialization_method = 'he'
     num_iterations = 10
     optimizer = 'sgd'  # Placeholder, adjust as per your model
@@ -252,7 +261,7 @@ if __name__ == "__main__":
 
     # Train the model
     start_time = time.time()
-    train_losses, test_losses, accuracies = nn_model.train(trainloader, testloader,
+    train_losses, test_losses, accuracies , model_details= nn_model.train(trainloader, testloader,
                                                            n_h=n_h, num_iterations=num_iterations, print_cost=True)
     end_time = time.time()
     print(f"Training completed in {(end_time - start_time)/60:.2f} minutes")
