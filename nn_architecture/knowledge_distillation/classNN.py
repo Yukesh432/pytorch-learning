@@ -21,7 +21,7 @@ class NeuralNetwork:
 
     
     def initialize_network(self, n_x, n_h, n_y, initialization_method):
-        np.random.seed(2)
+        np.random.seed(20)
         if initialization_method == 'he':
             w1 = np.random.randn(n_h, n_x) * np.sqrt(2. / n_x)
             w2 = np.random.randn(n_y, n_h) * np.sqrt(2. / n_h)
@@ -114,6 +114,7 @@ class NeuralNetwork:
     def train(self, trainloader, testloader, n_h, num_iterations=1000, print_cost=False, patience=10):
         train_losses, test_losses, accuracies = [], [], []
         best_test_loss = np.inf
+        early_stop_epoch= num_iterations
         no_improve_counter = 0
         model_details = {
             'learning_rate': learning_rate,
@@ -162,12 +163,13 @@ class NeuralNetwork:
 
             if no_improve_counter >= patience:
                 print(f"Early stopping triggered at epoch {epoch}.")
+                early_stop_epoch= epoch
                 break
 
             if print_cost:
                 print(f"Epoch {epoch} | Train Loss: {train_loss_avg:.4f} | Train Accuracy: {train_accuracy:.2f}% | Test Loss: {test_loss:.4f} | Test Accuracy: {test_accuracy:.2f}%")
-
-        return train_losses, test_losses, accuracies, model_details
+        self.model_details['stopping_epoch']= early_stop_epoch
+        return train_losses, test_losses, accuracies, early_stop_epoch
 
     def evaluate(self, dataloader, model_details):
         test_loss_accum = 0
@@ -242,7 +244,7 @@ if __name__ == "__main__":
     learning_rate = 0.01
     activation_function = 'sigmoid'
     initialization_method = 'he'
-    num_iterations = 10
+    num_iterations = 1000
     optimizer = 'sgd'  # Placeholder, adjust as per your model
     batch_size = 64  # Match DataLoader batch size
 
@@ -261,7 +263,7 @@ if __name__ == "__main__":
 
     # Train the model
     start_time = time.time()
-    train_losses, test_losses, accuracies , model_details= nn_model.train(trainloader, testloader,
+    train_losses, test_losses, accuracies, stopping_epoch= nn_model.train(trainloader, testloader,
                                                            n_h=n_h, num_iterations=num_iterations, print_cost=True)
     end_time = time.time()
     print(f"Training completed in {(end_time - start_time)/60:.2f} minutes")
@@ -273,7 +275,7 @@ if __name__ == "__main__":
     # Save model parameters
     model_save_dir = 'experiment_results/models'
     os.makedirs(model_save_dir, exist_ok=True)
-    model_filename = f"{learning_rate}_{num_iterations}_{initialization_method}_{n_h}_{optimizer}_{batch_size}.npz"
+    model_filename = f"{learning_rate}_{stopping_epoch}_{initialization_method}_{n_h}_{optimizer}_{batch_size}.npz"
     model_filepath = os.path.join(model_save_dir, model_filename)
     np.savez(model_filepath, **nn_model.parameters)
 
@@ -297,7 +299,7 @@ if __name__ == "__main__":
     plt.legend()
     plt.tight_layout()
 
-    evaluation_filename = f"{learning_rate}_{num_iterations}_{initialization_method}_{n_h}_{optimizer}_{batch_size}_evaluation.png"
+    evaluation_filename = f"{learning_rate}_{stopping_epoch}_{initialization_method}_{n_h}_{optimizer}_{batch_size}_evaluation.png"
     evaluation_filepath = os.path.join(evaluation_save_dir, evaluation_filename)
     plt.savefig(evaluation_filepath)
     plt.show()
