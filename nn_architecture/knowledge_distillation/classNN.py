@@ -44,12 +44,36 @@ class NeuralNetwork:
         Method for weights initialization (default is 'random').
 
     """
-    def __init__(self, n_x, n_h, n_y, learning_rate=0.01, activation_function='relu', initialization_method='random'):
+    def __init__(self, n_x, n_h, n_y, batch_size=32, learning_rate=0.01, epochs=10, optimizer='sgd', activation_function='relu', initialization_method='random'):
         self.n_y = n_y  # Number of output units
+        self.batch_size= batch_size
         self.learning_rate = learning_rate
+        self.epochs= epochs
+        self.optimizer= optimizer
         self.activation_function_name = activation_function
         self.initialization_method = initialization_method
         self.parameters = self.initialize_network(n_x, n_h, n_y, initialization_method)
+        self.evaluation_save_dir = 'experiment_results/evaluation'
+        # Initialize model details
+        self.model_details = {
+            'learning_rate': learning_rate,
+            'epochs': epochs,  # This should be updated during training
+            'initialization_method': initialization_method,
+            'n_h': n_h,
+            'optimizer': optimizer,  # This should be set if you have an optimizer
+            'batch_size': batch_size  # This should be updated based on your DataLoader configuration
+        }
+
+    def get_model_details(self):
+        """
+        Returns the model details.
+
+        Returns
+        -------
+        dict
+            A dictionary containing details about the model's configuration.
+        """
+        return self.model_details    
 
     
     def initialize_network(self, n_x, n_h, n_y, initialization_method):
@@ -300,7 +324,7 @@ class NeuralNetwork:
         self.parameters['b2'] -= self.learning_rate * grads['db2']  # Update biases of the second (output) layer
 
 
-    def train(self, trainloader, testloader, n_h, num_iterations=1000, print_cost=False, patience=10):
+    def train(self, trainloader, testloader, epochs=1000, print_cost=False, patience=10):
         """
         Trains the neural network using the provided training and test data loaders.
 
@@ -327,11 +351,11 @@ class NeuralNetwork:
         # Initialize lists to track the loss and accuracy
         train_losses, test_losses, accuracies = [], [], []
         best_test_loss = np.inf  # Initialize best_test_loss to infinity
-        early_stop_epoch = num_iterations  # Initialize early_stop_epoch to the max number of iterations
+        early_stop_epoch = epochs  # Initialize early_stop_epoch to the max number of iterations
         no_improve_counter = 0  # Counter to track the number of epochs without improvement
 
         # Loop over the dataset multiple times
-        for epoch in tqdm(range(num_iterations)):
+        for epoch in tqdm(range(epochs)):
             train_loss_accum = 0  # Accumulator for the training loss
             correct_preds_epoch = 0  # Counter for correct predictions
             total_preds_epoch = 0  # Counter for total predictions
@@ -397,7 +421,7 @@ class NeuralNetwork:
         return train_losses, test_losses, accuracies, early_stop_epoch
 
 
-    def evaluate(self, dataloader, model_details):
+    def evaluate(self, dataloader):
         """
         Evaluates the neural network on a given dataset.
 
@@ -452,7 +476,7 @@ class NeuralNetwork:
         test_accuracy = correct_preds / total_preds * 100
 
         # Generate and save confusion matrix using the true and predicted labels
-        self.save_confusion_matrix(y_true, y_pred, model_details)
+        self.save_confusion_matrix(y_true, y_pred, self.model_details)
 
         return average_test_loss, test_accuracy
 
@@ -467,9 +491,9 @@ class NeuralNetwork:
         plt.ylabel('True Labels')
         plt.title('Confusion Matrix')
 
-        evaluation_save_dir = 'experiment_results/evaluation'
-        os.makedirs(evaluation_save_dir, exist_ok=True)
-        confusion_matrix_filename = f"{model_details['learning_rate']}_{model_details['num_iterations']}_{model_details['initialization_method']}_{model_details['n_h']}_{model_details['optimizer']}_{model_details['batch_size']}_confusion_matrix.png"
+        
+        os.makedirs(self.evaluation_save_dir, exist_ok=True)
+        confusion_matrix_filename = f"{model_details['learning_rate']}_{model_details['epochs']}_{model_details['initialization_method']}_{model_details['n_h']}_{model_details['optimizer']}_{model_details['batch_size']}_confusion_matrix.png"
         confusion_matrix_filepath = os.path.join(evaluation_save_dir, confusion_matrix_filename)
         plt.savefig(confusion_matrix_filepath)
         plt.close()
@@ -502,13 +526,13 @@ if __name__ == "__main__":
     learning_rate = 0.01
     activation_function = 'relu'
     initialization_method = 'xavier'
-    num_iterations = 1000
+    epochs = 1000
     optimizer = 'sgd'  # Placeholder, adjust as per your model
     batch_size = 64  # Match DataLoader batch size
 
     model_details = {
         'learning_rate': learning_rate,
-        'num_iterations': num_iterations,
+        'epochs': epochs,
         'initialization_method': initialization_method,
         'n_h': n_h,
         'optimizer': optimizer,
@@ -516,18 +540,18 @@ if __name__ == "__main__":
     }
 
     # Initialize neural network model
-    nn_model = NeuralNetwork(n_x=n_x, n_h=n_h, n_y=n_y, learning_rate=learning_rate,
-                             activation_function=activation_function, initialization_method=initialization_method)
+    nn_model = NeuralNetwork(n_x=n_x, n_h=n_h, n_y=n_y, batch_size=batch_size, learning_rate=learning_rate, epochs=epochs,
+                             optimizer= optimizer, activation_function=activation_function, initialization_method=initialization_method)
 
     # Train the model
     start_time = time.time()
     train_losses, test_losses, accuracies, stopping_epoch= nn_model.train(trainloader, testloader,
-                                                           n_h=n_h, num_iterations=num_iterations, print_cost=True)
+                                                            epochs=epochs, print_cost=True)
     end_time = time.time()
     print(f"Training completed in {(end_time - start_time)/60:.2f} minutes")
 
     # Evaluate the model after training
-    test_loss, test_accuracy = nn_model.evaluate(testloader, model_details)
+    test_loss, test_accuracy = nn_model.evaluate(testloader)
     print(f"Test Loss: {test_loss}, Test Accuracy: {test_accuracy}%")
 
     # Save model parameters
