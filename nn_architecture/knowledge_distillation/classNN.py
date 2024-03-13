@@ -394,7 +394,7 @@ class NeuralNetwork:
 
             # Append losses and accuracy to lists
             train_losses.append(train_loss_avg)
-            test_loss, test_accuracy = self.evaluate(testloader, model_details)
+            test_loss, test_accuracy = self.evaluate(testloader)
             test_losses.append(test_loss)
             accuracies.append(test_accuracy)
 
@@ -475,10 +475,10 @@ class NeuralNetwork:
         average_test_loss = test_loss_accum / total_preds
         test_accuracy = correct_preds / total_preds * 100
 
-        # Generate and save confusion matrix using the true and predicted labels
-        self.save_confusion_matrix(y_true, y_pred, self.model_details)
+        # # Generate and save confusion matrix using the true and predicted labels
+        # self.save_confusion_matrix(y_true, y_pred, self.model_details)
 
-        return average_test_loss, test_accuracy
+        return average_test_loss, test_accuracy, y_true, y_pred
 
     
     
@@ -497,6 +497,32 @@ class NeuralNetwork:
         confusion_matrix_filepath = os.path.join(evaluation_save_dir, confusion_matrix_filename)
         plt.savefig(confusion_matrix_filepath)
         plt.close()
+
+    def save_model(self, save_dir, filename=None):
+        """
+        Saves the model parameters to a file.
+
+        Parameters
+        ----------
+        save_dir : str
+            The directory where the model parameters will be saved.
+        filename : str, optional
+            The name of the file to save the model parameters. If not provided,
+            a filename is generated based on model details.
+        """
+        # Ensure the save directory exists
+        os.makedirs(save_dir, exist_ok=True)
+        
+        # Generate a default filename if none is provided
+        if filename is None:
+            filename = f"model_{self.model_details['learning_rate']}_{self.model_details['stopping_epoch']}_{self.model_details['initialization_method']}_{self.model_details['n_h']}_{self.model_details['optimizer']}_{self.model_details['batch_size']}.npz"
+            
+        filepath = os.path.join(save_dir, filename)
+        
+        # Save the model parameters
+        np.savez(filepath, **self.parameters)
+        
+        print(f"Model saved to {filepath}")
     
 # Directory setup
 model_save_dir = 'experiment_results/models'
@@ -549,18 +575,20 @@ if __name__ == "__main__":
                                                             epochs=epochs, print_cost=True)
     end_time = time.time()
     print(f"Training completed in {(end_time - start_time)/60:.2f} minutes")
+    
+    # Update model details with the actual stopping epoch
+    nn_model.model_details['stopping_epoch'] = stopping_epoch
+
+    # Save the model parameters
+    model_save_dir = 'experiment_results/models'
+    nn_model.save_model(model_save_dir)
 
     # Evaluate the model after training
-    test_loss, test_accuracy = nn_model.evaluate(testloader)
+    test_loss, test_accuracy, y_true, y_pred = nn_model.evaluate(testloader)
     print(f"Test Loss: {test_loss}, Test Accuracy: {test_accuracy}%")
 
-    # Save model parameters
-    model_save_dir = 'experiment_results/models'
-    os.makedirs(model_save_dir, exist_ok=True)
-    model_filename = f"{learning_rate}_{stopping_epoch}_{initialization_method}_{n_h}_{optimizer}_{batch_size}.npz"
-    model_filepath = os.path.join(model_save_dir, model_filename)
-    np.savez(model_filepath, **nn_model.parameters)
-
+    nn_model.save_confusion_matrix(y_true, y_pred, model_details)
+ 
     # Plot training and validation loss and save
     evaluation_save_dir = 'experiment_results/evaluation'
     os.makedirs(evaluation_save_dir, exist_ok=True)
