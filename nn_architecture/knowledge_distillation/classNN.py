@@ -61,7 +61,8 @@ class NeuralNetwork:
             'initialization_method': initialization_method,
             'n_h': n_h,
             'optimizer': optimizer,  # This should be set if you have an optimizer
-            'batch_size': batch_size  # This should be updated based on your DataLoader configuration
+            'batch_size': batch_size,  # This should be updated based on your DataLoader configuration
+            'activation_function': activation_function
         }
 
     def get_model_details(self):
@@ -523,6 +524,42 @@ class NeuralNetwork:
         np.savez(filepath, **self.parameters)
         
         print(f"Model saved to {filepath}")
+
+    def log_model_performance(self, csv_file_path, training_accuracy, test_accuracy):
+        """
+        Logs the model's configuration and performance metrics to a CSV file.
+
+        Parameters
+        ----------
+        csv_file_path : str
+            The file path for the CSV log file.
+        training_accuracy : float
+            The training accuracy of the model.
+        test_accuracy : float
+            The test accuracy of the model.
+        """
+        # Check if the CSV file already exists
+        file_exists = os.path.isfile(csv_file_path)
+        
+        with open(csv_file_path, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            
+            # If the file does not exist, write the header first
+            if not file_exists:
+                writer.writerow(['Learning Rate', 'Epochs', 'Initialization Method', 'Number of Hidden Units', 'Optimizer', 'Batch Size', 'Stopping Epoch', 'Training Accuracy', 'Test Accuracy'])
+            
+            # Write the model details and performance metrics
+            writer.writerow([
+                self.model_details['learning_rate'],
+                self.model_details['epochs'],
+                self.model_details['initialization_method'],
+                self.model_details['n_h'],
+                self.model_details['optimizer'],
+                self.model_details['batch_size'],
+                self.model_details.get('stopping_epoch', 'N/A'),  # Use 'N/A' if stopping_epoch isn't in model_details
+                training_accuracy,
+                test_accuracy
+            ])
     
 # Directory setup
 model_save_dir = 'experiment_results/models'
@@ -547,11 +584,11 @@ if __name__ == "__main__":
 
     # Model configuration
     n_x = 28*28
-    n_h = 64
+    n_h = 128
     n_y = 10
     learning_rate = 0.01
     activation_function = 'relu'
-    initialization_method = 'xavier'
+    initialization_method = 'he'
     epochs = 5
     optimizer = 'sgd'  # Placeholder, adjust as per your model
     batch_size = 64  # Match DataLoader batch size
@@ -589,6 +626,12 @@ if __name__ == "__main__":
     print(f"Test Loss: {test_loss}, Test Accuracy: {test_accuracy}%")
 
     nn_model.save_confusion_matrix(y_true, y_pred, model_details)
+
+    # Log the model's performance
+    final_training_accuracy = accuracies[-1] 
+    csv_file_path = 'model_performance_log.csv'
+    nn_model.log_model_performance(csv_file_path, final_training_accuracy, test_accuracy)
+
  
     # Plot training and validation loss and save
     evaluation_save_dir = 'experiment_results/evaluation'
