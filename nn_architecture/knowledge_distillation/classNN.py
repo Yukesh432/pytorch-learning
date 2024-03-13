@@ -394,7 +394,7 @@ class NeuralNetwork:
 
             # Append losses and accuracy to lists
             train_losses.append(train_loss_avg)
-            test_loss, test_accuracy = self.evaluate(testloader)
+            test_loss, test_accuracy,_, _ = self.evaluate(testloader)
             test_losses.append(test_loss)
             accuracies.append(test_accuracy)
 
@@ -493,7 +493,7 @@ class NeuralNetwork:
 
         
         os.makedirs(self.evaluation_save_dir, exist_ok=True)
-        confusion_matrix_filename = f"{model_details['learning_rate']}_{model_details['epochs']}_{model_details['initialization_method']}_{model_details['n_h']}_{model_details['optimizer']}_{model_details['batch_size']}_confusion_matrix.png"
+        confusion_matrix_filename = f"{model_details['learning_rate']}_{model_details['epochs']}_{model_details['initialization_method']}_{model_details['activation_function']}_{model_details['n_h']}_{model_details['optimizer']}_{model_details['batch_size']}_confusion_matrix.png"
         confusion_matrix_filepath = os.path.join(evaluation_save_dir, confusion_matrix_filename)
         plt.savefig(confusion_matrix_filepath)
         plt.close()
@@ -515,7 +515,7 @@ class NeuralNetwork:
         
         # Generate a default filename if none is provided
         if filename is None:
-            filename = f"model_{self.model_details['learning_rate']}_{self.model_details['stopping_epoch']}_{self.model_details['initialization_method']}_{self.model_details['n_h']}_{self.model_details['optimizer']}_{self.model_details['batch_size']}.npz"
+            filename = f"model_{self.model_details['learning_rate']}_{self.model_details['stopping_epoch']}_{self.model_details['initialization_method']}_{self.model_details['activation_function']}_{self.model_details['n_h']}_{self.model_details['optimizer']}_{self.model_details['batch_size']}.npz"
             
         filepath = os.path.join(save_dir, filename)
         
@@ -552,7 +552,7 @@ if __name__ == "__main__":
     learning_rate = 0.01
     activation_function = 'relu'
     initialization_method = 'xavier'
-    epochs = 1000
+    epochs = 10
     optimizer = 'sgd'  # Placeholder, adjust as per your model
     batch_size = 64  # Match DataLoader batch size
 
@@ -609,7 +609,7 @@ if __name__ == "__main__":
     plt.legend()
     plt.tight_layout()
 
-    evaluation_filename = f"{learning_rate}_{stopping_epoch}_{initialization_method}_{n_h}_{optimizer}_{batch_size}_evaluation.png"
+    evaluation_filename = f"{learning_rate}_{stopping_epoch}_{initialization_method}_{activation_function}_{n_h}_{optimizer}_{batch_size}_evaluation.png"
     evaluation_filepath = os.path.join(evaluation_save_dir, evaluation_filename)
     plt.savefig(evaluation_filepath)
     plt.show()
