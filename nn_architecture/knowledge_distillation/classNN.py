@@ -552,7 +552,7 @@ if __name__ == "__main__":
     learning_rate = 0.01
     activation_function = 'relu'
     initialization_method = 'xavier'
-    epochs = 10
+    epochs = 5
     optimizer = 'sgd'  # Placeholder, adjust as per your model
     batch_size = 64  # Match DataLoader batch size
 
@@ -562,7 +562,8 @@ if __name__ == "__main__":
         'initialization_method': initialization_method,
         'n_h': n_h,
         'optimizer': optimizer,
-        'batch_size': batch_size
+        'batch_size': batch_size,
+        'activation_function': activation_function
     }
 
     # Initialize neural network model
