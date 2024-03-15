@@ -562,7 +562,6 @@ class AblationStudy:
                                      activation_function=config['activation_function'],
                                      initialization_method=config['initialization_method'])
 
-            print(f"Training model with configuration: {config}")
             # Train the model
             train_losses, test_losses, train_accuracies, test_accuracies, early_stop_epoch = nn_model.train(self.trainloader, self.testloader, 
                                                                                    epochs=config['epochs'], print_cost=True)
@@ -658,7 +657,7 @@ if __name__ == "__main__":
     # Ensure other parameters are set
     n_x = 28*28  # Input size for MNIST
     n_y = 10     # Number of output classes for MNIST
-    epochs = 5
+    epochs = 50000
     optimizer = 'sgd'
     batch_size = 64
     # activation_function = 'relu'
@@ -667,7 +666,7 @@ if __name__ == "__main__":
     # Generate configurations
     configurations = [
     {'n_x': n_x, 'n_h': n_h, 'n_y': n_y, 'learning_rate': lr, 'epochs': epochs,
-     'optimizer': optimizer, 'batch_size': batch_size, 'activation_function': activation_function,
+     'optimizer': optimizer, 'batch_size': batch_size, 'activation_function': af,
      'initialization_method': initialization_method}
     for lr, n_h, af in product(learning_rates, hidden_units_options, activation_function)
 ]
