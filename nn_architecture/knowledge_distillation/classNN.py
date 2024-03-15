@@ -335,9 +335,7 @@ class NeuralNetwork:
             The DataLoader containing the training data.
         testloader : DataLoader
             The DataLoader containing the test data.
-        n_h : int
-            Number of neurons in the hidden layer.
-        num_iterations : int, optional
+        epochs : int, optional
             Number of epochs to train the network for (default is 1000).
         print_cost : bool, optional
             Whether to print the cost/loss after each epoch (default is False).
@@ -346,60 +344,44 @@ class NeuralNetwork:
 
         Returns
         -------
-        tuple
-            A tuple containing training losses, test losses, accuracies, and the epoch at which training was stopped.
+        tuple of lists
+            A tuple containing lists of training losses, test losses, training accuracies, test accuracies, and the epoch at which training was stopped.
         """
-        # Initialize lists to track the loss and accuracy
-        train_losses, test_losses, accuracies = [], [], []
-        best_test_loss = np.inf  # Initialize best_test_loss to infinity
-        early_stop_epoch = epochs  # Initialize early_stop_epoch to the max number of iterations
-        no_improve_counter = 0  # Counter to track the number of epochs without improvement
+        train_losses, test_losses, train_accuracies, test_accuracies = [], [], [], []
+        best_test_loss = np.inf
+        early_stop_epoch = epochs
+        no_improve_counter = 0
 
-        # Loop over the dataset multiple times
         for epoch in tqdm(range(epochs)):
-            train_loss_accum = 0  # Accumulator for the training loss
-            correct_preds_epoch = 0  # Counter for correct predictions
-            total_preds_epoch = 0  # Counter for total predictions
+            train_loss_accum = 0
+            correct_preds_epoch = 0
+            total_preds_epoch = 0
 
-            # Iterate over the training data
             for X_batch, Y_batch in trainloader:
-                # Flatten the batch and transpose it to match our weight matrix dimensions
                 X_batch_np = X_batch.view(X_batch.size(0), -1).numpy().T
-                # Convert labels to one-hot encoding
                 Y_batch_ohe = self.one_hot_encode(Y_batch.numpy(), self.n_y)
 
-                # Perform forward propagation
                 A2, cache = self.forward_propagation(X_batch_np)
-                # Compute the loss
                 cost_train = self.compute_loss(A2, Y_batch_ohe)
-                # Accumulate the loss over the batch
                 train_loss_accum += cost_train * X_batch.size(0)
 
-                # Perform backpropagation to get gradients
                 grads = self.backpropagation(cache, X_batch_np, Y_batch_ohe)
-                # Update parameters using gradients
                 self.update_parameters(grads)
 
-                # Make predictions and count correct ones
                 predictions = np.argmax(A2, axis=0)
-
                 correct_preds = np.sum(predictions == np.argmax(Y_batch_ohe, axis=1))
-                # accumulates correct predictions across all batches
                 correct_preds_epoch += correct_preds
-                # keeps track of the total number of predictions
                 total_preds_epoch += Y_batch.size(0)
 
-            # Calculate average training loss and accuracy for the epoch
             train_loss_avg = train_loss_accum / total_preds_epoch
             train_accuracy = correct_preds_epoch / total_preds_epoch * 100
-
-            # Append losses and accuracy to lists
             train_losses.append(train_loss_avg)
-            test_loss, test_accuracy,_, _ = self.evaluate(testloader)
-            test_losses.append(test_loss)
-            accuracies.append(test_accuracy)
+            train_accuracies.append(train_accuracy)
 
-            # Check for improvement and implement early stopping
+            test_loss, test_accuracy, _, _ = self.evaluate(testloader)
+            test_losses.append(test_loss)
+            test_accuracies.append(test_accuracy)
+
             if test_loss < best_test_loss:
                 best_test_loss = test_loss
                 no_improve_counter = 0
@@ -408,19 +390,14 @@ class NeuralNetwork:
 
             if no_improve_counter >= patience:
                 print(f"Early stopping triggered at epoch {epoch}.")
-                early_stop_epoch = epoch  # Record the epoch number at stopping
+                early_stop_epoch = epoch
                 break
 
-            # Optionally print the cost/loss
             if print_cost:
                 print(f"Epoch {epoch} | Train Loss: {train_loss_avg:.4f} | Train Accuracy: {train_accuracy:.2f}% | Test Loss: {test_loss:.4f} | Test Accuracy: {test_accuracy:.2f}%")
 
-        # Update model_details with the stopping epoch
         self.model_details['stopping_epoch'] = early_stop_epoch
-
-        # Return the loss and accuracy records, along with the stopping epoch
-        return train_losses, test_losses, accuracies, early_stop_epoch
-
+        return train_losses, test_losses, train_accuracies, test_accuracies, early_stop_epoch
 
     def evaluate(self, dataloader):
         """
@@ -561,6 +538,97 @@ class NeuralNetwork:
                 test_accuracy
             ])
     
+class AblationStudy:
+    def __init__(self, trainloader, testloader):
+        self.trainloader = trainloader
+        self.testloader = testloader
+
+    def run_study(self, configurations):
+        """
+        Runs the ablation study over the set of provided configurations.
+
+        Parameters
+        ----------
+        configurations : list of dicts
+            A list where each dict contains specific configuration settings for a model.
+        """
+        for config in configurations:
+            print(f"Starting for following configuration: \n{config}")
+            print("*"*100)
+            # Initialize the model with the current configuration
+            nn_model = NeuralNetwork(n_x=config['n_x'], n_h=config['n_h'], n_y=config['n_y'],
+                                     learning_rate=config['learning_rate'], epochs=config['epochs'],
+                                     optimizer=config['optimizer'], batch_size=config['batch_size'],
+                                     activation_function=config['activation_function'],
+                                     initialization_method=config['initialization_method'])
+
+            print(f"Training model with configuration: {config}")
+            # Train the model
+            train_losses, test_losses, train_accuracies, test_accuracies, early_stop_epoch = nn_model.train(self.trainloader, self.testloader, 
+                                                                                   epochs=config['epochs'], print_cost=True)
+            # Evaluate the model after training
+            test_loss, test_accuracy, y_true, y_pred = nn_model.evaluate(self.testloader)
+            # Log the model's performance
+            final_training_accuracy = train_accuracies[-1]
+            csv_file_path = 'model_performance_log.csv'
+            nn_model.log_model_performance(csv_file_path, final_training_accuracy, test_accuracy)
+            # Save the model parameters
+            model_save_dir = 'experiment_results/models'
+            nn_model.save_model(model_save_dir)
+            # Save the confusion matrix
+            nn_model.save_confusion_matrix(y_true, y_pred, config)
+            # Plot and save training and validation loss
+            self.save_evaluation_plots(train_losses, test_losses, test_accuracies, config)
+
+    @staticmethod
+    def save_evaluation_plots(train_losses, test_losses, accuracies, config):
+        """
+        Saves plots of the training/validation loss and validation accuracy.
+
+        Parameters
+        ----------
+        train_losses : list
+            List of training losses per epoch.
+        test_losses : list
+            List of validation/test losses per epoch.
+        accuracies : list
+            List of validation/test accuracies per epoch.
+        config : dict
+            The configuration dictionary for the current experiment.
+        """
+        # Construct a base filename from the configuration details
+        base_filename = f"lr{config['learning_rate']}_epochs{config['epochs']}_init{config['initialization_method']}_nh{config['n_h']}_act{config['activation_function']}_bs{config['batch_size']}"
+        
+        evaluation_save_dir = 'experiment_results/evaluation'
+        
+        # Plot training and validation loss
+        plt.figure(figsize=(12, 5))
+        plt.subplot(1, 2, 1)
+        plt.plot(train_losses, label='Training Loss')
+        plt.plot(test_losses, label='Validation Loss')
+        plt.title('Training and Validation Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.legend()
+        
+        # Plot validation accuracy
+        plt.subplot(1, 2, 2)
+        plt.plot(accuracies, label='Validation Accuracy')
+        plt.title('Validation Accuracy')
+        plt.xlabel('Epoch')
+        plt.ylabel('Accuracy (%)')
+        plt.legend()
+
+        plt.tight_layout()
+        
+        # Construct the filepath and save the plots
+        plots_filepath = os.path.join(evaluation_save_dir, f"{base_filename}_plots.png")
+        plt.savefig(plots_filepath)
+        plt.close()  # Close the plot to free resources
+        
+        print(f"Saved evaluation plots to {plots_filepath}")
+
+
 # Directory setup
 model_save_dir = 'experiment_results/models'
 evaluation_save_dir = 'experiment_results/evaluation'
@@ -568,8 +636,9 @@ os.makedirs(model_save_dir, exist_ok=True)
 os.makedirs(evaluation_save_dir, exist_ok=True)
 
 if __name__ == "__main__":
-    if __name__ == "__main__":
-        transform = transforms.Compose([
+    from itertools import product
+    # Data transformations
+    transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
     ])
@@ -582,78 +651,65 @@ if __name__ == "__main__":
     trainloader = DataLoader(train_data, batch_size=64, shuffle=True)
     testloader = DataLoader(test_data, batch_size=64, shuffle=False)
 
-    # Model configuration
-    n_x = 28*28
-    n_h = 128
-    n_y = 10
-    learning_rate = 0.01
+    learning_rates = [0.001, 0.005, 0.01, 0.05, 0.1]
+    hidden_units_options = [32, 64, 128, 256, 512]
+
+    # Ensure other parameters are set
+    n_x = 28*28  # Input size for MNIST
+    n_y = 10     # Number of output classes for MNIST
+    epochs = 5
+    optimizer = 'sgd'
+    batch_size = 64
     activation_function = 'relu'
     initialization_method = 'he'
-    epochs = 5
-    optimizer = 'sgd'  # Placeholder, adjust as per your model
-    batch_size = 64  # Match DataLoader batch size
 
-    model_details = {
-        'learning_rate': learning_rate,
-        'epochs': epochs,
-        'initialization_method': initialization_method,
-        'n_h': n_h,
-        'optimizer': optimizer,
-        'batch_size': batch_size,
-        'activation_function': activation_function
-    }
+    configurations = []
 
-    # Initialize neural network model
-    nn_model = NeuralNetwork(n_x=n_x, n_h=n_h, n_y=n_y, batch_size=batch_size, learning_rate=learning_rate, epochs=epochs,
-                             optimizer= optimizer, activation_function=activation_function, initialization_method=initialization_method)
+    # Generate all combinations of learning rates and hidden units
+    for lr, n_h in product(learning_rates, hidden_units_options):
+        configurations.append({
+            'n_x': n_x,
+            'n_h': n_h,
+            'n_y': n_y,
+            'learning_rate': lr,
+            'epochs': epochs,
+            'optimizer': optimizer,
+            'batch_size': batch_size,
+            'activation_function': activation_function,
+            'initialization_method': initialization_method,
+        })
+    configurations = configurations[:10]  # Keep only the first 10 configurations
 
-    # Train the model
-    start_time = time.time()
-    train_losses, test_losses, accuracies, stopping_epoch= nn_model.train(trainloader, testloader,
-                                                            epochs=epochs, print_cost=True)
-    end_time = time.time()
-    print(f"Training completed in {(end_time - start_time)/60:.2f} minutes")
-    
-    # Update model details with the actual stopping epoch
-    nn_model.model_details['stopping_epoch'] = stopping_epoch
+    print("Generated Configurations:")
+    for i, config in enumerate(configurations, 1):
+        print(f"Config {i}: LR={config['learning_rate']}, Hidden Units={config['n_h']}")
 
-    # Save the model parameters
+
+    #     # Define configurations for the ablation study
+    # configurations = [
+    #     {'n_x': 28*28, 'n_h': 64, 'n_y': 10, 'learning_rate': 0.01, 'epochs': 5,
+    #      'optimizer': 'sgd', 'batch_size': 64, 'activation_function': 'relu', 'initialization_method': 'he'},
+    #     {'n_x': 28*28, 'n_h': 128, 'n_y': 10, 'learning_rate': 0.005, 'epochs': 5,
+    #      'optimizer': 'sgd', 'batch_size': 64, 'activation_function': 'sigmoid', 'initialization_method': 'xavier'},
+    #     {'n_x': 28*28, 'n_h': 128, 'n_y': 10, 'learning_rate': 0.5, 'epochs': 5,
+    #      'optimizer': 'sgd', 'batch_size': 64, 'activation_function': 'sigmoid', 'initialization_method': 'xavier'},
+    #     # Add more configurations as needed for the study
+    # ]
+
+    # Initialize AblationStudy
+    study = AblationStudy(trainloader, testloader)
+
+    # Ensure the model save directory exists
     model_save_dir = 'experiment_results/models'
-    nn_model.save_model(model_save_dir)
+    os.makedirs(model_save_dir, exist_ok=True)
 
-    # Evaluate the model after training
-    test_loss, test_accuracy, y_true, y_pred = nn_model.evaluate(testloader)
-    print(f"Test Loss: {test_loss}, Test Accuracy: {test_accuracy}%")
-
-    nn_model.save_confusion_matrix(y_true, y_pred, model_details)
-
-    # Log the model's performance
-    final_training_accuracy = accuracies[-1] 
-    csv_file_path = 'model_performance_log.csv'
-    nn_model.log_model_performance(csv_file_path, final_training_accuracy, test_accuracy)
-
- 
-    # Plot training and validation loss and save
+    # Ensure the evaluation save directory exists
     evaluation_save_dir = 'experiment_results/evaluation'
     os.makedirs(evaluation_save_dir, exist_ok=True)
-    plt.figure(figsize=(12, 5))
-    plt.subplot(1, 2, 1)
-    plt.plot(train_losses, label='Training loss')
-    plt.plot(test_losses, label='Validation loss')
-    plt.title('Loss over epochs')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend()
 
-    plt.subplot(1, 2, 2)
-    plt.plot(accuracies, label='Validation accuracy')
-    plt.title('Accuracy over epochs')
-    plt.xlabel('Epoch')
-    plt.ylabel('Accuracy')
-    plt.legend()
-    plt.tight_layout()
+    # Run the ablation study
+    start_time = time.time()
+    study.run_study(configurations)
+    end_time = time.time()
 
-    evaluation_filename = f"{learning_rate}_{stopping_epoch}_{initialization_method}_{activation_function}_{n_h}_{optimizer}_{batch_size}_evaluation.png"
-    evaluation_filepath = os.path.join(evaluation_save_dir, evaluation_filename)
-    plt.savefig(evaluation_filepath)
-    plt.show()
+    print(f"Completed ablation study in {(end_time - start_time)/60:.2f} minutes")
