@@ -653,37 +653,28 @@ if __name__ == "__main__":
 
     learning_rates = [0.001, 0.005, 0.01, 0.05, 0.1]
     hidden_units_options = [32, 64, 128, 256, 512]
-
+    batch_sizes = [32, 64, 128]
+    activation_function= ['relu', 'sigmoid', 'tanh']
     # Ensure other parameters are set
     n_x = 28*28  # Input size for MNIST
     n_y = 10     # Number of output classes for MNIST
     epochs = 5
     optimizer = 'sgd'
     batch_size = 64
-    activation_function = 'relu'
+    # activation_function = 'relu'
     initialization_method = 'he'
 
-    configurations = []
+    # Generate configurations
+    configurations = [
+    {'n_x': n_x, 'n_h': n_h, 'n_y': n_y, 'learning_rate': lr, 'epochs': epochs,
+     'optimizer': optimizer, 'batch_size': batch_size, 'activation_function': activation_function,
+     'initialization_method': initialization_method}
+    for lr, n_h, af in product(learning_rates, hidden_units_options, activation_function)
+]
 
-    # Generate all combinations of learning rates and hidden units
-    for lr, n_h in product(learning_rates, hidden_units_options):
-        configurations.append({
-            'n_x': n_x,
-            'n_h': n_h,
-            'n_y': n_y,
-            'learning_rate': lr,
-            'epochs': epochs,
-            'optimizer': optimizer,
-            'batch_size': batch_size,
-            'activation_function': activation_function,
-            'initialization_method': initialization_method,
-        })
-    configurations = configurations[:10]  # Keep only the first 10 configurations
-
-    print("Generated Configurations:")
-    for i, config in enumerate(configurations, 1):
-        print(f"Config {i}: LR={config['learning_rate']}, Hidden Units={config['n_h']}")
-
+# Reviewing a few generated configurations
+for i, config in enumerate(configurations[:5], 1):  # Just show the first 5 for brevity
+    print(f"Config {i}: LR={config['learning_rate']}, Hidden Units={config['n_h']}, Batch Size={config['batch_size']}")
 
     #     # Define configurations for the ablation study
     # configurations = [
