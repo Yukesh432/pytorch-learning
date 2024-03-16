@@ -649,7 +649,6 @@ if __name__ == "__main__":
     # Prepare DataLoaders
     trainloader = DataLoader(train_data, batch_size=64, shuffle=True)
     testloader = DataLoader(test_data, batch_size=64, shuffle=False)
-
     learning_rates = [0.001, 0.005, 0.01, 0.05, 0.1]
     hidden_units_options = [32, 64, 128, 256, 512]
     batch_sizes = [32, 64, 128]
@@ -663,7 +662,7 @@ if __name__ == "__main__":
     # activation_function = 'relu'
     initialization_method = 'he'
 
-    # Generate configurations
+    # Generate configuration
     configurations = [
     {'n_x': n_x, 'n_h': n_h, 'n_y': n_y, 'learning_rate': lr, 'epochs': epochs,
      'optimizer': optimizer, 'batch_size': batch_size, 'activation_function': af,
