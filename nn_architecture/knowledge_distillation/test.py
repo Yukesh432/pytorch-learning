@@ -35,7 +35,7 @@ class NeuralNetwork:
     n_h : int
         Number of hidden units.
     n_y : int
-        Number of output units
+        Number of output units.
     learning_rate : float, optional
         Learning rate for optimization (default is 0.01).
     activation_function : str, optional
@@ -106,11 +106,9 @@ class NeuralNetwork:
         elif initialization_method == 'xavier':
             w1 = np.random.randn(n_h, n_x) * np.sqrt(1. / n_x)
             w2 = np.random.randn(n_y, n_h) * np.sqrt(1. / n_h)
-        elif initialization_method == 'random':  # default or 'random' initialization
+        else:  # default or 'random' initialization
             w1 = np.random.randn(n_h, n_x) * 0.01
             w2 = np.random.randn(n_y, n_h) * 0.01
-        else:
-            pass
         b1 = np.zeros((n_h, 1))
         b2 = np.zeros((n_y, 1))
         return {"W1": w1, "b1": b1, "W2": w2, "b2": b2}
@@ -310,21 +308,50 @@ class NeuralNetwork:
 
         return grads
 
+    # def update_parameters(self, grads):
+    #     """
+    #     Updates the parameters of the network using gradient descent.
+
+    #     Parameters
+    #     ----------
+    #     grads : dict
+    #         A dictionary containing the gradients of the loss function with respect to each parameter.
+    #     """
+    #     # Update each parameter in the direction of the negative gradient
+    #     # This is done to minimize the loss function
+    #     self.parameters['W1'] -= self.learning_rate * grads['dW1']  # Update weights of the first layer
+    #     self.parameters['b1'] -= self.learning_rate * grads['db1']  # Update biases of the first layer
+    #     self.parameters['W2'] -= self.learning_rate * grads['dW2']  # Update weights of the second (output) layer
+    #     self.parameters['b2'] -= self.learning_rate * grads['db2']  # Update biases of the second (output) layer
     def update_parameters(self, grads):
         """
-        Updates the parameters of the network using gradient descent.
+        Updates the parameters of the network using RMSprop optimizer.
 
         Parameters
         ----------
         grads : dict
             A dictionary containing the gradients of the loss function with respect to each parameter.
         """
-        # Update each parameter in the direction of the negative gradient
-        # This is done to minimize the loss function
-        self.parameters['W1'] -= self.learning_rate * grads['dW1']  # Update weights of the first layer
-        self.parameters['b1'] -= self.learning_rate * grads['db1']  # Update biases of the first layer
-        self.parameters['W2'] -= self.learning_rate * grads['dW2']  # Update weights of the second (output) layer
-        self.parameters['b2'] -= self.learning_rate * grads['db2']  # Update biases of the second (output) layer
+        # Initialize RMSprop parameters
+        beta = 0.9  # RMSprop hyperparameter
+        epsilon = 1e-8  # Small constant to avoid division by zero
+
+        # Initialize the RMSprop parameters for each parameter
+        if not hasattr(self, 'RMSprop_cache'):
+            self.RMSprop_cache = {'W1': np.zeros_like(grads['dW1']), 'b1': np.zeros_like(grads['db1']),
+                                'W2': np.zeros_like(grads['dW2']), 'b2': np.zeros_like(grads['db2'])}
+
+        # Update RMSprop cache
+        self.RMSprop_cache['W1'] = beta * self.RMSprop_cache['W1'] + (1 - beta) * np.square(grads['dW1'])
+        self.RMSprop_cache['b1'] = beta * self.RMSprop_cache['b1'] + (1 - beta) * np.square(grads['db1'])
+        self.RMSprop_cache['W2'] = beta * self.RMSprop_cache['W2'] + (1 - beta) * np.square(grads['dW2'])
+        self.RMSprop_cache['b2'] = beta * self.RMSprop_cache['b2'] + (1 - beta) * np.square(grads['db2'])
+
+        # Update parameters
+        self.parameters['W1'] -= self.learning_rate * grads['dW1'] / (np.sqrt(self.RMSprop_cache['W1']) + epsilon)
+        self.parameters['b1'] -= self.learning_rate * grads['db1'] / (np.sqrt(self.RMSprop_cache['b1']) + epsilon)
+        self.parameters['W2'] -= self.learning_rate * grads['dW2'] / (np.sqrt(self.RMSprop_cache['W2']) + epsilon)
+        self.parameters['b2'] -= self.learning_rate * grads['db2'] / (np.sqrt(self.RMSprop_cache['b2']) + epsilon)
 
 
     def train(self, trainloader, testloader, epochs=1000, print_cost=False, patience=10):
@@ -598,7 +625,7 @@ class AblationStudy:
             The configuration dictionary for the current experiment.
         """
         # Construct a base filename from the configuration details
-        base_filename = f"lr{config['learning_rate']}_epochs{config['epochs']}_init{config['initialization_method']}_nh{config['n_h']}_act{config['activation_function']}_opt_{config['optimizer']}_bs{config['batch_size']}"
+        base_filename = f"lr{config['learning_rate']}_epochs{config['epochs']}_init{config['initialization_method']}_nh{config['n_h']}_act{config['activation_function']}_bs{config['batch_size']}"
         
         evaluation_save_dir = 'experiment_results/evaluation'
         
@@ -651,29 +678,26 @@ if __name__ == "__main__":
     # Prepare DataLoaders
     trainloader = DataLoader(train_data, batch_size=64, shuffle=True)
     testloader = DataLoader(test_data, batch_size=64, shuffle=False)
-
-    learning_rates = [0.001, 0.005, 0.01, 0.05, 0.1]
-    hidden_units_options = [32, 64, 128, 256, 512]
-    initialization_methods= ['he', 'xavier', 'random']
-    batch_sizes = [32, 64, 128]
-    activation_function= ['relu', 'sigmoid', 'tanh']
+    # learning_rates = [0.001, 0.005, 0.01, 0.05, 0.1]
+    # hidden_units_options = [32, 64, 128, 256, 512]
+    # batch_sizes = [32, 64, 128]
+    # activation_function= ['relu', 'sigmoid', 'tanh']
     # Ensure other parameters are set
     n_x = 28*28  # Input size for MNIST
     n_y = 10     # Number of output classes for MNIST
+    n_h= 64
+    lr= 0.01
     epochs = 50000
-    optimizer = 'sgd'
+    optimizer = 'rmsprop'
     batch_size = 64
-    hidden_units= 64
-    learning_rate= 0.01
-    # activation_function = 'relu'
-    # initialization_method = 'he'
+    activation_function = 'relu'
+    initialization_method = 'he'
 
-    # Generate configurations
+    # Generate configuration
     configurations = [
-    {'n_x': n_x, 'n_h': hidden_units, 'n_y': n_y, 'learning_rate': learning_rate, 'epochs': epochs,
-     'optimizer': optimizer, 'batch_size': batch_size, 'activation_function': af,
-     'initialization_method': methods}
-    for methods, af in product(initialization_methods, activation_function)
+    {'n_x': n_x, 'n_h': n_h, 'n_y': n_y, 'learning_rate': lr, 'epochs': epochs,
+     'optimizer': optimizer, 'batch_size': batch_size, 'activation_function': activation_function,
+     'initialization_method': initialization_method}
 ]
 
 # Reviewing a few generated configurations
