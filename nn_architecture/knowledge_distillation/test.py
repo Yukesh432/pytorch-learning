@@ -323,35 +323,63 @@ class NeuralNetwork:
     #     self.parameters['b1'] -= self.learning_rate * grads['db1']  # Update biases of the first layer
     #     self.parameters['W2'] -= self.learning_rate * grads['dW2']  # Update weights of the second (output) layer
     #     self.parameters['b2'] -= self.learning_rate * grads['db2']  # Update biases of the second (output) layer
+    # def update_parameters(self, grads):
+    #     """
+    #     Updates the parameters of the network using RMSprop optimizer.
+
+    #     Parameters
+    #     ----------
+    #     grads : dict
+    #         A dictionary containing the gradients of the loss function with respect to each parameter.
+    #     """
+    #     # Initialize RMSprop parameters
+    #     beta = 0.9  # RMSprop hyperparameter
+    #     epsilon = 1e-8  # Small constant to avoid division by zero
+
+    #     # Initialize the RMSprop parameters for each parameter
+    #     if not hasattr(self, 'RMSprop_cache'):
+    #         self.RMSprop_cache = {'W1': np.zeros_like(grads['dW1']), 'b1': np.zeros_like(grads['db1']),
+    #                             'W2': np.zeros_like(grads['dW2']), 'b2': np.zeros_like(grads['db2'])}
+
+    #     # Update RMSprop cache
+    #     self.RMSprop_cache['W1'] = beta * self.RMSprop_cache['W1'] + (1 - beta) * np.square(grads['dW1'])
+    #     self.RMSprop_cache['b1'] = beta * self.RMSprop_cache['b1'] + (1 - beta) * np.square(grads['db1'])
+    #     self.RMSprop_cache['W2'] = beta * self.RMSprop_cache['W2'] + (1 - beta) * np.square(grads['dW2'])
+    #     self.RMSprop_cache['b2'] = beta * self.RMSprop_cache['b2'] + (1 - beta) * np.square(grads['db2'])
+
+    #     # Update parameters
+    #     self.parameters['W1'] -= self.learning_rate * grads['dW1'] / (np.sqrt(self.RMSprop_cache['W1']) + epsilon)
+    #     self.parameters['b1'] -= self.learning_rate * grads['db1'] / (np.sqrt(self.RMSprop_cache['b1']) + epsilon)
+    #     self.parameters['W2'] -= self.learning_rate * grads['dW2'] / (np.sqrt(self.RMSprop_cache['W2']) + epsilon)
+    #     self.parameters['b2'] -= self.learning_rate * grads['db2'] / (np.sqrt(self.RMSprop_cache['b2']) + epsilon)
     def update_parameters(self, grads):
         """
-        Updates the parameters of the network using RMSprop optimizer.
+        Updates the parameters of the network using Adagrad optimizer.
 
         Parameters
         ----------
         grads : dict
             A dictionary containing the gradients of the loss function with respect to each parameter.
         """
-        # Initialize RMSprop parameters
-        beta = 0.9  # RMSprop hyperparameter
+        # Initialize Adagrad parameters
         epsilon = 1e-8  # Small constant to avoid division by zero
 
-        # Initialize the RMSprop parameters for each parameter
-        if not hasattr(self, 'RMSprop_cache'):
-            self.RMSprop_cache = {'W1': np.zeros_like(grads['dW1']), 'b1': np.zeros_like(grads['db1']),
+        # Initialize the Adagrad parameters for each parameter
+        if not hasattr(self, 'Adagrad_cache'):
+            self.Adagrad_cache = {'W1': np.zeros_like(grads['dW1']), 'b1': np.zeros_like(grads['db1']),
                                 'W2': np.zeros_like(grads['dW2']), 'b2': np.zeros_like(grads['db2'])}
 
-        # Update RMSprop cache
-        self.RMSprop_cache['W1'] = beta * self.RMSprop_cache['W1'] + (1 - beta) * np.square(grads['dW1'])
-        self.RMSprop_cache['b1'] = beta * self.RMSprop_cache['b1'] + (1 - beta) * np.square(grads['db1'])
-        self.RMSprop_cache['W2'] = beta * self.RMSprop_cache['W2'] + (1 - beta) * np.square(grads['dW2'])
-        self.RMSprop_cache['b2'] = beta * self.RMSprop_cache['b2'] + (1 - beta) * np.square(grads['db2'])
+        # Update Adagrad cache
+        self.Adagrad_cache['W1'] += np.square(grads['dW1'])
+        self.Adagrad_cache['b1'] += np.square(grads['db1'])
+        self.Adagrad_cache['W2'] += np.square(grads['dW2'])
+        self.Adagrad_cache['b2'] += np.square(grads['db2'])
 
         # Update parameters
-        self.parameters['W1'] -= self.learning_rate * grads['dW1'] / (np.sqrt(self.RMSprop_cache['W1']) + epsilon)
-        self.parameters['b1'] -= self.learning_rate * grads['db1'] / (np.sqrt(self.RMSprop_cache['b1']) + epsilon)
-        self.parameters['W2'] -= self.learning_rate * grads['dW2'] / (np.sqrt(self.RMSprop_cache['W2']) + epsilon)
-        self.parameters['b2'] -= self.learning_rate * grads['db2'] / (np.sqrt(self.RMSprop_cache['b2']) + epsilon)
+        self.parameters['W1'] -= self.learning_rate * grads['dW1'] / (np.sqrt(self.Adagrad_cache['W1']) + epsilon)
+        self.parameters['b1'] -= self.learning_rate * grads['db1'] / (np.sqrt(self.Adagrad_cache['b1']) + epsilon)
+        self.parameters['W2'] -= self.learning_rate * grads['dW2'] / (np.sqrt(self.Adagrad_cache['W2']) + epsilon)
+        self.parameters['b2'] -= self.learning_rate * grads['db2'] / (np.sqrt(self.Adagrad_cache['b2']) + epsilon)
 
 
     def train(self, trainloader, testloader, epochs=1000, print_cost=False, patience=10):
@@ -625,7 +653,7 @@ class AblationStudy:
             The configuration dictionary for the current experiment.
         """
         # Construct a base filename from the configuration details
-        base_filename = f"lr{config['learning_rate']}_epochs{config['epochs']}_init{config['initialization_method']}_nh{config['n_h']}_act{config['activation_function']}_bs{config['batch_size']}"
+        base_filename = f"lr{config['learning_rate']}_epochs{config['epochs']}_init{config['initialization_method']}_nh{config['n_h']}_act{config['activation_function']}_opt_{config['optimizer']}_bs{config['batch_size']}"
         
         evaluation_save_dir = 'experiment_results/evaluation'
         
@@ -688,10 +716,10 @@ if __name__ == "__main__":
     n_h= 64
     lr= 0.01
     epochs = 50000
-    optimizer = 'rmsprop'
+    optimizer = 'adagrad'
     batch_size = 64
     activation_function = 'relu'
-    initialization_method = 'he'
+    initialization_method = 'xavier'
 
     # Generate configuration
     configurations = [
