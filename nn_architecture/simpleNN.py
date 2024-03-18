@@ -21,7 +21,7 @@ config = {
     "initialization_method": "default",  # Options: "xavier_uniform", "he_normal", etc.
     "dropout_percentage": None,
     "batch_size": 64,
-    "epochs": 10,
+    "epochs": 5,
     "patience": 5
 }
 
@@ -101,45 +101,64 @@ def evaluate_model(model, test_loader, criterion, device):
     accuracy = 100. * correct / len(test_loader.dataset)
     return test_loss, accuracy, all_preds, all_targets
 
-def save_learning_curves(train_acc, val_acc, filename_prefix):
-    plt.figure(figsize=(10, 5))
-    plt.plot(train_acc, label='Train Accuracy')
-    plt.plot(val_acc, label='Validation Accuracy')
-    plt.title('Accuracy vs. Number of Training Epochs')
-    plt.xlabel('Epochs')
-    plt.ylabel('Accuracy')
-    plt.legend()
-    plt.savefig(f"{filename_prefix}_accuracy_curve.png")
+def save_learning_curves(train_acc, val_acc, train_loss, val_loss, filename_prefix):
+    fig, axs = plt.subplots(2, 1, figsize=(10, 10))
+    
+    # Plot accuracy
+    axs[0].plot(train_acc, label='Train Accuracy')
+    axs[0].plot(val_acc, label='Validation Accuracy')
+    axs[0].set_title('Accuracy vs. Number of Training Epochs')
+    axs[0].set_xlabel('Epochs')
+    axs[0].set_ylabel('Accuracy')
+    axs[0].legend(loc="best")
+    
+    # Plot loss
+    axs[1].plot(train_loss, label='Train Loss')
+    axs[1].plot(val_loss, label='Validation Loss')
+    axs[1].set_title('Loss vs. Number of Training Epochs')
+    axs[1].set_xlabel('Epochs')
+    axs[1].set_ylabel('Loss')
+    axs[1].legend(loc="best")
+    
+    plt.tight_layout()
+    
+    # Save the figure in the "experiments" directory
+    plt.savefig(os.path.join(experiments_dir, f"{filename_prefix}_learning_curves.png"))
     plt.close()
 
 def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues, filename='confusion_matrix.png'):
-    """
-    This function prints and plots the confusion matrix.
-    Normalization can be applied by setting `normalize=True`.
-    """
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1, keepdims=True)  # Simplify normalization step
+
+    plt.figure(figsize=(8, 6))
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)
     plt.colorbar()
+    
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks, classes, rotation=45)
     plt.yticks(tick_marks, classes)
 
-    if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-
+    # Simplify the loop for adding text annotations
     thresh = cm.max() / 2.
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, cm[i, j],
-                 horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            plt.text(j, i, format(cm[i, j], '.2f' if normalize else 'd'),
+                     ha="center", va="center",
+                     color="white" if cm[i, j] > thresh else "black")
 
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
-    plt.savefig(filename)
+    
+    # Save the confusion matrix in the "experiments" directory
+    experiments_dir = "experiments"  # Ensure this matches your directory setup
+    plt.savefig(os.path.join(experiments_dir, filename))
     plt.close()
 
 def log_metrics(train_loss, train_accuracy, val_loss, val_accuracy, early_stopping_epoch, model_training_time, config, filename="training_log.csv"):
+    # Adjust the filename to include the "experiments" directory
+    filename = os.path.join(experiments_dir, filename)
     with open(filename, mode='a') as csv_file:
         fieldnames = ['train_loss', 'train_accuracy', 'val_loss', 'val_accuracy', 'early_stopping_epoch', 'model_training_time', 'config']
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
@@ -159,13 +178,14 @@ def get_optimizer(model_parameters, config):
         "Adam": optim.Adam(model_parameters, lr=config["learning_rate"]),
         # Add other optimizers as needed
     }
-    return optimizers.get(config["optimizer"], optim.Adam(model_parameters, lr=config["learning_rate"]))
+    optimizer= optimizers.get(config["optimizer"], optim.Adam(model_parameters, lr=config["learning_rate"]))
+    return optimizer
    
 def config_to_string(config):
     config_items = ["{}_{}".format(key, value) for key, value in config.items()]
     return "_".join(config_items)
 
-def main(config, experiments_dir):
+def main(config):
     # Transformations and DataLoader setup
     transform = transforms.Compose([
         transforms.ToTensor(),
@@ -184,12 +204,13 @@ def main(config, experiments_dir):
     model = ANN(config).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=config["learning_rate"])  # Choose optimizer based on config
+    # optimizer = get_optimizer(model.parameters(), config)
 
     early_stopping = EarlyStopping(patience=config["patience"], verbose=True)
 
     train_losses, val_losses, train_accuracies, val_accuracies = [], [], [], []
     start_time = time.time()
-
+    early_stopping_epoch= None
     for epoch in range(1, config["epochs"] + 1):
         model.train()
         train_loss = 0
@@ -218,8 +239,6 @@ def main(config, experiments_dir):
 
         print(f'Epoch {epoch}: Train Loss: {train_losses[-1]:.4f}, Train Acc: {train_accuracies[-1]:.2f}%, Val Loss: {val_losses[-1]:.4f}, Val Acc: {val_accuracies[-1]:.2f}%')
 
-        log_metrics(epoch, train_losses[-1], train_accuracies[-1], val_losses[-1], val_accuracies[-1], config)
-
         early_stopping(val_loss, model)
 
 
@@ -228,19 +247,27 @@ def main(config, experiments_dir):
 
             print(f"Early stopping triggered at {early_stopping_epoch} epoch!!!!!!!!!!!!!!!")
             break
-
-        
+    
 
     model_training_time = time.time() - start_time
     print(f"Training completed in {model_training_time:.2f}s")
+    # Ensure early_stopping_epoch has a meaningful value for logging
+    if early_stopping_epoch is None:
+        early_stopping_epoch = config["epochs"]  # Indicate training went through all epochs
+
+    
+    # For logging metrics, the filename can directly use the prefix, or as defined earlier, it's already included in the function
+    log_metrics(train_losses[-1], train_accuracies[-1], val_losses[-1], val_accuracies[-1], early_stopping_epoch, model_training_time, config, "training_log.csv")
+
+    
     
     # Evaluation and plotting
     _, test_accuracy, all_preds, all_targets = evaluate_model(model, test_loader, criterion, device)
     cm = confusion_matrix(all_targets, all_preds)
     classes = list(range(10))
 
-    filename_prefix = f"model_cm_{config_to_string(config)}"
-    plot_confusion_matrix(cm, classes, title='Confusion Matrix', filename=f"{filename_prefix}.png")
+    # filename_prefix = f"model_cm_{config_to_string(config)}"
+    # plot_confusion_matrix(confusion_matrix, classes, title='Confusion Matrix', filename= filename_prefix)
 
     filename_prefix = f"model_performance_{config_to_string(config)}"
     save_learning_curves(train_accuracies, val_accuracies, train_losses, val_losses, filename_prefix)
@@ -251,4 +278,4 @@ if __name__ == "__main__":
     experiments_dir = "experiments"
     if not os.path.exists(experiments_dir):
         os.makedirs(experiments_dir)
-    main(config, experiments_dir)
+    main(config)
