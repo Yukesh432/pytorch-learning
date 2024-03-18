@@ -9,6 +9,7 @@ import time
 import csv
 import itertools
 from sklearn.metrics import confusion_matrix
+import os
 
 # Hyperparameters and model configurations
 config = {
@@ -31,7 +32,7 @@ class EarlyStopping:
         self.verbose = verbose
         self.counter = 0
         self.best_score = None
-        self.early_stop = True
+        self.early_stop = False
         self.val_loss_min = np.Inf
         self.delta = delta
 
@@ -138,20 +139,20 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
     plt.savefig(filename)
     plt.close()
 
-def log_metrics(epoch, train_loss, train_accuracy, val_loss, val_accuracy, config, filename="training_log.csv"):
+def log_metrics(train_loss, train_accuracy, val_loss, val_accuracy, early_stopping_epoch, model_training_time, config, filename="training_log.csv"):
     with open(filename, mode='a') as csv_file:
-        fieldnames = ['epoch', 'train_loss', 'train_accuracy', 'val_loss', 'val_accuracy', 'config']
+        fieldnames = ['train_loss', 'train_accuracy', 'val_loss', 'val_accuracy', 'early_stopping_epoch', 'model_training_time', 'config']
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-        if epoch == 1:  # Add header once
-            writer.writeheader()
         writer.writerow({
-            'epoch': epoch,
             'train_loss': train_loss,
             'train_accuracy': train_accuracy,
             'val_loss': val_loss,
             'val_accuracy': val_accuracy,
+            'early_stopping_epoch': early_stopping_epoch,
+            'model_training_time': model_training_time,
             'config': str(config)
         })
+
 def get_optimizer(model_parameters, config):
     optimizers = {
         "SGD": optim.SGD(model_parameters, lr=config["learning_rate"], momentum=0.9),
@@ -160,8 +161,11 @@ def get_optimizer(model_parameters, config):
     }
     return optimizers.get(config["optimizer"], optim.Adam(model_parameters, lr=config["learning_rate"]))
    
+def config_to_string(config):
+    config_items = ["{}_{}".format(key, value) for key, value in config.items()]
+    return "_".join(config_items)
 
-def main(config):
+def main(config, experiments_dir):
     # Transformations and DataLoader setup
     transform = transforms.Compose([
         transforms.ToTensor(),
@@ -216,11 +220,16 @@ def main(config):
 
         log_metrics(epoch, train_losses[-1], train_accuracies[-1], val_losses[-1], val_accuracies[-1], config)
 
+        early_stopping(val_loss, model)
+
+
         if early_stopping.early_stop:
-            print("Early stopping triggered.")
+            early_stopping_epoch= epoch
+
+            print(f"Early stopping triggered at {early_stopping_epoch} epoch!!!!!!!!!!!!!!!")
             break
 
-        early_stopping(val_loss, model)
+        
 
     model_training_time = time.time() - start_time
     print(f"Training completed in {model_training_time:.2f}s")
@@ -229,8 +238,17 @@ def main(config):
     _, test_accuracy, all_preds, all_targets = evaluate_model(model, test_loader, criterion, device)
     cm = confusion_matrix(all_targets, all_preds)
     classes = list(range(10))
-    plot_confusion_matrix(cm, classes, title='Confusion Matrix', filename=f"cm_{epoch}.png")
-    save_learning_curves(train_accuracies, val_accuracies, filename_prefix=f"learning_curve_{epoch}")
+
+    filename_prefix = f"model_cm_{config_to_string(config)}"
+    plot_confusion_matrix(cm, classes, title='Confusion Matrix', filename=f"{filename_prefix}.png")
+
+    filename_prefix = f"model_performance_{config_to_string(config)}"
+    save_learning_curves(train_accuracies, val_accuracies, train_losses, val_losses, filename_prefix)
+
 
 if __name__ == "__main__":
-    main(config)
+    # Ensure the "experiments" directory exists
+    experiments_dir = "experiments"
+    if not os.path.exists(experiments_dir):
+        os.makedirs(experiments_dir)
+    main(config, experiments_dir)
