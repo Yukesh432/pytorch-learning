@@ -14,9 +14,9 @@ import os
 # Hyperparameters and model configurations
 config = {
     "num_of_hidden_layers": 1,
-    "num_of_hidden_units": 128,
+    "num_of_hidden_units": 32,
     "learning_rate": 0.001,
-    "optimizer": "Adam",  # Options: "SGD", "Adam", etc.
+    "optims": "Adagrad",  # Options: "SGD", "Adam", etc.
     "activation_function": "ReLU",  # Options: "Sigmoid", "ReLU", etc.
     "initialization_method": "default",  # Options: "xavier_uniform", "he_normal", etc.
     "dropout_percentage": None,
@@ -61,24 +61,54 @@ class ANN(nn.Module):
         for i in range(len(layers) - 1):
             self.model_layers.append(nn.Linear(layers[i], layers[i+1]))
         
-        # Example to apply an initialization method, if specified
-        if config.get("initialization_method", None) == "xavier_uniform":
-            for layer in self.model_layers:
-                if hasattr(layer, 'weight'):
+        # apply initialization method to each layer
+        for layer in self.model_layers:
+            if hasattr(layer, 'weight'):
+                if config.get("initialization_method", "") == "xavier_uniform":
                     nn.init.xavier_uniform_(layer.weight)
+                elif config.get("initialization_method", "") == "xavier_normal":
+                    nn.init.xavier_normal_(layer.weight)
+                elif config.get("initialization_method", "") == "he_uniform":
+                    nn.init.kaiming_uniform_(layer.weight, non_linearity="relu")
+                elif config.get("initialization_method", "") == "he_normal":
+                    nn.init.kaiming_normal_(layer.weight, nonlinearity='relu')
+                elif config.get("initialization_method", "") == "ones":
+                    nn.init.ones_(layer.weight)
+                elif config.get("initialization_method", "") == "zeros":
+                    nn.init.zeros_(layer.weight)
+                elif config.get("initialization_method", "") == "random_normal":
+                    nn.init.normal_(layer.weight)
+                elif config.get("initialization_method", "") == "random_uniform":
+                    nn.init.uniform_(layer.weight)
+                else:
+                    print("Not a valid initialization method.........")
         
-        self.activation_function = config.get("activation_function", "ReLU")
+        self.activation= config.get("activation_function", "ReLU")
 
     def forward(self, x):
-        for i, layer in enumerate(self.model_layers):
+        for i, layer in enumerate(self.model_layers[:-1]):  # Exclude the last layer for activation
             x = layer(x)
-            if i < len(self.model_layers) - 1:  # No activation on the output layer
-                if self.activation_function == "ReLU":
-                    x = F.relu(x)
-                elif self.activation_function == "Sigmoid":
-                    x = torch.sigmoid(x)
-                # Include other activation functions as needed
+            x = self.apply_activation(x)
+        x = self.model_layers[-1](x)  # Apply the last layer without activation
         return x
+    
+    def apply_activation(self, x):
+        # Dynamically apply activation function
+        if self.activation == "ReLU":
+            return F.relu(x)
+        elif self.activation == "Sigmoid":
+            return torch.sigmoid(x)
+        elif self.activation == "Tanh":
+            return torch.tanh(x)
+        elif self.activation == "LeakyReLU":
+            return F.leaky_relu(x)
+        elif self.activation == "ELU":
+            return F.elu(x)
+        elif self.activation == "Softplus":
+            return F.softplus(x)
+        # Include other activation functions as needed
+        return x
+
 
 def evaluate_model(model, test_loader, criterion, device):
     model.eval()
@@ -126,11 +156,11 @@ def save_learning_curves(train_acc, val_acc, train_loss, val_loss, filename_pref
     plt.savefig(os.path.join(experiments_dir, f"{filename_prefix}_learning_curves.png"))
     plt.close()
 
-def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues, filename='confusion_matrix.png'):
+def plot_confusion_matrix(cm, classes, config_details, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues, base_filename='confusion_matrix'):
+    plt.figure(figsize=(10, 8))
     if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1, keepdims=True)  # Simplify normalization step
+        cm = cm.astype('float') / cm.sum(axis=1, keepdims=True)
 
-    plt.figure(figsize=(8, 6))
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)
     plt.colorbar()
@@ -139,29 +169,39 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
     plt.xticks(tick_marks, classes, rotation=45)
     plt.yticks(tick_marks, classes)
 
-    # Simplify the loop for adding text annotations
     thresh = cm.max() / 2.
     for i in range(cm.shape[0]):
         for j in range(cm.shape[1]):
-            plt.text(j, i, format(cm[i, j], '.2f' if normalize else 'd'),
-                     ha="center", va="center",
-                     color="white" if cm[i, j] > thresh else "black")
+            plt.text(j, i, format(cm[i, j], '.2f' if normalize else 'd'), ha="center", va="center", color="white" if cm[i, j] > thresh else "black")
 
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     
-    # Save the confusion matrix in the "experiments" directory
-    experiments_dir = "experiments"  # Ensure this matches your directory setup
-    plt.savefig(os.path.join(experiments_dir, filename))
+    # Dynamically construct the filename from the configuration details
+    config_string = "_".join([f"{k}_{v}" for k, v in config_details.items()])
+    filename = f"{base_filename}_{config_string}.png"
+
+    # Ensure the "experiments" directory exists and save the figure there
+    experiments_dir = "experiments"
+    os.makedirs(experiments_dir, exist_ok=True)
+    plt.savefig(os.path.join(experiments_dir, filename), bbox_inches='tight')
     plt.close()
 
 def log_metrics(train_loss, train_accuracy, val_loss, val_accuracy, early_stopping_epoch, model_training_time, config, filename="training_log.csv"):
     # Adjust the filename to include the "experiments" directory
     filename = os.path.join(experiments_dir, filename)
-    with open(filename, mode='a') as csv_file:
+    
+    # Check if the file already exists and has content (to decide whether to write the header)
+    file_exists = os.path.isfile(filename) and os.path.getsize(filename) > 0
+    
+    with open(filename, mode='a', newline='') as csv_file:
         fieldnames = ['train_loss', 'train_accuracy', 'val_loss', 'val_accuracy', 'early_stopping_epoch', 'model_training_time', 'config']
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+
+        if not file_exists:
+            writer.writeheader()
+
         writer.writerow({
             'train_loss': train_loss,
             'train_accuracy': train_accuracy,
@@ -172,15 +212,6 @@ def log_metrics(train_loss, train_accuracy, val_loss, val_accuracy, early_stoppi
             'config': str(config)
         })
 
-def get_optimizer(model_parameters, config):
-    optimizers = {
-        "SGD": optim.SGD(model_parameters, lr=config["learning_rate"], momentum=0.9),
-        "Adam": optim.Adam(model_parameters, lr=config["learning_rate"]),
-        # Add other optimizers as needed
-    }
-    optimizer= optimizers.get(config["optimizer"], optim.Adam(model_parameters, lr=config["learning_rate"]))
-    return optimizer
-   
 def config_to_string(config):
     config_items = ["{}_{}".format(key, value) for key, value in config.items()]
     return "_".join(config_items)
@@ -203,8 +234,16 @@ def main(config):
     # Model, loss criterion, and optimizer setup
     model = ANN(config).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=config["learning_rate"])  # Choose optimizer based on config
-    # optimizer = get_optimizer(model.parameters(), config)
+    if config['optims']== 'SGD':
+        optimizer= optim.SGD(model.parameters(), lr= config['learning_rate'])
+    elif config['optims']== 'Adam':
+        optimizer= optim.Adam(model.parameters(), lr=config['learning_rate'])
+    elif config['optims']== 'Adadelta':
+        optimizer= optim.Adadelta(model.parameters(), lr=config['learning_rate'])
+    elif config['optims']== 'Adagrad':
+        optimizer= optim.Adagrad(model.parameters(), lr= config['learning_rate'])
+    else:
+        print("not valid optimizer")
 
     early_stopping = EarlyStopping(patience=config["patience"], verbose=True)
 
@@ -259,15 +298,15 @@ def main(config):
     # For logging metrics, the filename can directly use the prefix, or as defined earlier, it's already included in the function
     log_metrics(train_losses[-1], train_accuracies[-1], val_losses[-1], val_accuracies[-1], early_stopping_epoch, model_training_time, config, "training_log.csv")
 
-    
-    
-    # Evaluation and plotting
+
+    # Assuming evaluate_model, model, test_loader, criterion are defined
     _, test_accuracy, all_preds, all_targets = evaluate_model(model, test_loader, criterion, device)
     cm = confusion_matrix(all_targets, all_preds)
     classes = list(range(10))
 
-    # filename_prefix = f"model_cm_{config_to_string(config)}"
-    # plot_confusion_matrix(confusion_matrix, classes, title='Confusion Matrix', filename= filename_prefix)
+    # Correct usage of the plotting function
+    filename_prefix = "confusion_matrix"  # Example prefix, adjust as needed
+    plot_confusion_matrix(cm, classes, config, normalize=True, title='Normalized Confusion Matrix')
 
     filename_prefix = f"model_performance_{config_to_string(config)}"
     save_learning_curves(train_accuracies, val_accuracies, train_losses, val_losses, filename_prefix)
