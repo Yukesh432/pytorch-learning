@@ -14,41 +14,74 @@ import os
 # Hyperparameters and model configurations
 config = {
     "num_of_hidden_layers": 1,
-    "num_of_hidden_units": 32,
+    "num_of_hidden_units": 8,
     "learning_rate": 0.001,
-    "optims": "Adagrad",  # Options: "SGD", "Adam", etc.
-    "activation_function": "ReLU",  # Options: "Sigmoid", "ReLU", etc.
-    "initialization_method": "default",  # Options: "xavier_uniform", "he_normal", etc.
+    "optims": "SGD",  # Options: "SGD", "Adam", etc.
+    "activation_function": "linear",  # Options: "Sigmoid", "ReLU", etc.
+    "initialization_method": "zeros",  # Options: "xavier_uniform", "he_normal", etc.
     "dropout_percentage": None,
     "batch_size": 64,
-    "epochs": 5,
-    "patience": 5
+    "epochs": 50000,
+    "patience": 10
 }
 
-# Early Stopping class
+
 class EarlyStopping:
-    def __init__(self, patience=7, verbose=False, delta=0):
+    """
+    Early stopping utility for halting the training process when validation loss 
+    does not improve beyond a given threshold (delta) for a specified number of epochs (patience).
+    
+    Parameters:
+    -----------
+    patience : int
+        The number of epochs to wait for improvement before stopping the training.
+    verbose : bool
+        If True, prints a message for each validation loss improvement.
+    delta : float
+        The minimum change in the monitored quantity to qualify as an improvement.
+    
+    Attributes:
+    -----------
+    counter : int
+        Tracks the number of epochs without significant improvement.
+    best_loss : float
+        Records the best validation loss observed during training.
+    early_stop : bool
+        Indicates whether the training process should be stopped.
+    """
+    
+    def __init__(self, patience=7, verbose=True, delta=0 ):
         self.patience = patience
         self.verbose = verbose
-        self.counter = 0
-        self.best_score = None
-        self.early_stop = False
-        self.val_loss_min = np.Inf
-        self.delta = delta
-
+        self.counter = 0  # Initialize counter of epochs without improvement
+        self.best_loss = np.Inf  # Initialize the best observed loss as infinity
+        self.early_stop = False  # Initially, do not halt training
+        self.delta = delta  # Set the threshold for detecting improvement
+    
     def __call__(self, val_loss, model):
-        score = -val_loss
-        if self.best_score is None:
-            self.best_score = score
-        elif score < self.best_score + self.delta:
-            self.counter += 1
-            if self.verbose:
-                print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
-            if self.counter >= self.patience:
-                self.early_stop = True
+        """
+        Call method to check if early stopping criteria are met.
+        
+        Parameters:
+        -----------
+        val_loss : float
+            The current epoch's validation loss.
+        model : torch.nn.Module
+            The model being trained - not directly used in this simplified version,
+            but can be used for saving model checkpoints.
+        """
+        # Check if the current validation loss shows improvement over the best loss observed
+        if val_loss < self.best_loss - self.delta:
+            self.best_loss = val_loss  # Update the best observed loss
+            self.counter = 0  # Reset the improvement counter
         else:
-            self.best_score = score
-            self.counter = 0
+            self.counter += 1  # Increment the counter as no improvement is observed
+            # Check if the number of epochs without improvement has reached the patience limit
+            if self.counter >= self.patience:
+                self.early_stop = True  # Signal to stop training
+            if self.verbose:
+                # Optionally print the status of early stopping
+                print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
 
 # Define the model
 class ANN(nn.Module):
@@ -106,6 +139,8 @@ class ANN(nn.Module):
             return F.elu(x)
         elif self.activation == "Softplus":
             return F.softplus(x)
+        elif self.activation == "linear":
+            return x
         # Include other activation functions as needed
         return x
 
@@ -149,6 +184,10 @@ def save_learning_curves(train_acc, val_acc, train_loss, val_loss, filename_pref
     axs[1].set_xlabel('Epochs')
     axs[1].set_ylabel('Loss')
     axs[1].legend(loc="best")
+
+    # Adjust the y-axis scale of the loss plot to zoom in on changes
+    # axs[1].set_ylim([min(val_loss)*0.95, max(val_loss)*1.05])
+
     
     plt.tight_layout()
     
@@ -216,7 +255,7 @@ def config_to_string(config):
     config_items = ["{}_{}".format(key, value) for key, value in config.items()]
     return "_".join(config_items)
 
-def main(config):
+def main():
     # Transformations and DataLoader setup
     transform = transforms.Compose([
         transforms.ToTensor(),
@@ -317,4 +356,4 @@ if __name__ == "__main__":
     experiments_dir = "experiments"
     if not os.path.exists(experiments_dir):
         os.makedirs(experiments_dir)
-    main(config)
+    main()
