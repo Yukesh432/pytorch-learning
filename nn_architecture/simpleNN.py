@@ -14,10 +14,10 @@ import os
 # Hyperparameters and model configurations
 config = {
     "num_of_hidden_layers": 1,
-    "num_of_hidden_units": 8,
+    "num_of_hidden_units": 256,
     "learning_rate": 0.001,
     "optims": "SGD",  # Options: "SGD", "Adam", etc.
-    "activation_function": "linear",  # Options: "Sigmoid", "ReLU", etc.
+    "activation_function": "ReLU",  # Options: "Sigmoid", "ReLU", etc.
     "initialization_method": "zeros",  # Options: "xavier_uniform", "he_normal", etc.
     "dropout_percentage": None,
     "batch_size": 64,
@@ -89,6 +89,8 @@ class ANN(nn.Module):
         super(ANN, self).__init__()
         # Assuming config contains 'num_of_hidden_layers' and 'hidden_units' as a list of units per layer
         layers = [784] + [config["num_of_hidden_units"] for _ in range(config["num_of_hidden_layers"])] + [10]
+        print("*"*100)
+        print(layers)
 
         self.model_layers = nn.ModuleList()
         for i in range(len(layers) - 1):
@@ -96,6 +98,8 @@ class ANN(nn.Module):
         
         # apply initialization method to each layer
         for layer in self.model_layers:
+            print("LAYERS PRINTED!!!!!!!!!!!!!!")
+            print(layer)
             if hasattr(layer, 'weight'):
                 if config.get("initialization_method", "") == "xavier_uniform":
                     nn.init.xavier_uniform_(layer.weight)
@@ -108,6 +112,7 @@ class ANN(nn.Module):
                 elif config.get("initialization_method", "") == "ones":
                     nn.init.ones_(layer.weight)
                 elif config.get("initialization_method", "") == "zeros":
+                    print("Zero initialization ...............")
                     nn.init.zeros_(layer.weight)
                 elif config.get("initialization_method", "") == "random_normal":
                     nn.init.normal_(layer.weight)
@@ -115,34 +120,48 @@ class ANN(nn.Module):
                     nn.init.uniform_(layer.weight)
                 else:
                     print("Not a valid initialization method.........")
-        
-        self.activation= config.get("activation_function", "ReLU")
 
-    def forward(self, x):
-        for i, layer in enumerate(self.model_layers[:-1]):  # Exclude the last layer for activation
-            x = layer(x)
-            x = self.apply_activation(x)
-        x = self.model_layers[-1](x)  # Apply the last layer without activation
-        return x
-    
+            print("WEIGHT INITIALIZED")
+        # self.activation= config.get("activation_function", "")
+        # print("ACTIVATION FUNCTION IS BEING APPLIED")
+
     def apply_activation(self, x):
+        self.activation= config['activation_function']
+        # print(self.activation)
+        # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1")
         # Dynamically apply activation function
         if self.activation == "ReLU":
+            # print("RELU FUNCTION ACTIVATEDDDDD")
             return F.relu(x)
         elif self.activation == "Sigmoid":
-            return torch.sigmoid(x)
+            return F.sigmoid(x)
         elif self.activation == "Tanh":
-            return torch.tanh(x)
+            return F.tanh(x)
         elif self.activation == "LeakyReLU":
             return F.leaky_relu(x)
         elif self.activation == "ELU":
             return F.elu(x)
         elif self.activation == "Softplus":
             return F.softplus(x)
+        elif self.activation == "Selu":
+            return F.selu(x)
+        elif self.activation == "Gelu":
+            return F.gelu(x)
         elif self.activation == "linear":
             return x
+        else:
+            print("NO such Activation function selected")
+            # return x
         # Include other activation functions as needed
+        # return x
+
+    def forward(self, x):
+        for _, layer in enumerate(self.model_layers[:-1]):  # Exclude the last layer for activation
+            x = layer(x)
+            x = self.apply_activation(x)
+        x = self.model_layers[-1](x)  # Apply the last layer without activation
         return x
+    
 
 
 def evaluate_model(model, test_loader, criterion, device):
@@ -259,7 +278,7 @@ def main():
     # Transformations and DataLoader setup
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))
+        transforms.Normalize((0.5,), (0.5,))
     ])
     train_dataset = datasets.MNIST('./data', train=True, download=True, transform=transform)
     test_dataset = datasets.MNIST('./data', train=False, download=True, transform=transform)
@@ -294,7 +313,7 @@ def main():
         train_loss = 0
         correct = 0
         total = 0
-        for batch_idx, (data, target) in enumerate(train_loader):
+        for _, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
             data = data.view(-1, 28*28)
             optimizer.zero_grad()
