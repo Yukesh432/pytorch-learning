@@ -14,7 +14,7 @@ import os
 # Hyperparameters and model configurations
 config = {
     "num_of_hidden_layers": 1,
-    "num_of_hidden_units": 256,
+    "num_of_hidden_units": 32,
     "learning_rate": 0.001,
     "optims": "SGD",  # Options: "SGD", "Adam", etc.
     "activation_function": "ReLU",  # Options: "Sigmoid", "ReLU", etc.
