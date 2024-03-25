@@ -14,14 +14,14 @@ import os
 # Hyperparameters and model configurations
 config = {
     "num_of_hidden_layers": 1,
-    "num_of_hidden_units": 64,
+    "num_of_hidden_units": 1024,
     "learning_rate": 0.001,
     "optims": "SGD",  # Options: "SGD", "Adam", etc.
     "activation_function": "ReLU",  # Options: "Sigmoid", "ReLU", etc.
-    "initialization_method": "xavier_uniform",  # Options: "xavier_uniform", "he_normal", etc.
+    "initialization_method": "random_normal",  # Options: "xavier_uniform", "he_normal", etc.
     "dropout_percentage": None,
     "batch_size": 64,
-    "epochs": 50,
+    "epochs": 50000,
     "patience": 10
 }
 
@@ -207,23 +207,6 @@ def evaluate_model(model, test_loader, criterion, device):
     return avg_loss, accuracy, all_preds, all_targets
 
 def save_learning_curves(train_acc, val_acc, train_loss, val_loss, filename_prefix):
-    # fig, axs = plt.subplots(2, 1, figsize=(10, 10))
-    
-    # # Plot accuracy
-    # axs[0].plot(train_acc, label='Train Accuracy')
-    # axs[0].plot(val_acc, label='Validation Accuracy')
-    # axs[0].set_title('Accuracy vs. Number of Training Epochs')
-    # axs[0].set_xlabel('Epochs')
-    # axs[0].set_ylabel('Accuracy')
-    # axs[0].legend(loc="best")
-    
-    # # Plot loss
-    # axs[1].plot(train_loss, label='Train Loss')
-    # axs[1].plot(val_loss, label='Validation Loss')
-    # axs[1].set_title('Loss vs. Number of Training Epochs')
-    # axs[1].set_xlabel('Epochs')
-    # axs[1].set_ylabel('Loss')
-    # axs[1].legend(loc="best")
     plt.figure(figsize=(10,5))
     plt.subplot(1,2,1)
     plt.plot(train_acc, label= "Training Accuracy")
