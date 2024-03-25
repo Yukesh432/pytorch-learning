@@ -22,7 +22,7 @@ config = {
     "dropout_percentage": None,
     "batch_size": 64,
     "epochs": 50000,
-    "patience": 10
+    "patience": 15
 }
 
 
