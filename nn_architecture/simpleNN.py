@@ -14,14 +14,14 @@ import os
 # Hyperparameters and model configurations
 config = {
     "num_of_hidden_layers": 1,
-    "num_of_hidden_units": 32,
+    "num_of_hidden_units": 64,
     "learning_rate": 0.001,
     "optims": "SGD",  # Options: "SGD", "Adam", etc.
     "activation_function": "ReLU",  # Options: "Sigmoid", "ReLU", etc.
-    "initialization_method": "zeros",  # Options: "xavier_uniform", "he_normal", etc.
+    "initialization_method": "xavier_uniform",  # Options: "xavier_uniform", "he_normal", etc.
     "dropout_percentage": None,
     "batch_size": 64,
-    "epochs": 50000,
+    "epochs": 50,
     "patience": 10
 }
 
@@ -106,9 +106,9 @@ class ANN(nn.Module):
                 elif config.get("initialization_method", "") == "xavier_normal":
                     nn.init.xavier_normal_(layer.weight)
                 elif config.get("initialization_method", "") == "he_uniform":
-                    nn.init.kaiming_uniform_(layer.weight, non_linearity="relu")
+                    nn.init.kaiming_uniform_(layer.weight, nonlinearity="relu")
                 elif config.get("initialization_method", "") == "he_normal":
-                    nn.init.kaiming_normal_(layer.weight, nonlinearity='relu')
+                    nn.init.kaiming_normal_(layer.weight, nonlinearity= "relu")
                 elif config.get("initialization_method", "") == "ones":
                     nn.init.ones_(layer.weight)
                 elif config.get("initialization_method", "") == "zeros":
@@ -164,9 +164,29 @@ class ANN(nn.Module):
     
 
 
+# def evaluate_model(model, test_loader, criterion, device):
+#     model.eval()
+#     test_loss = 0
+#     correct = 0
+#     all_preds = []
+#     all_targets = []
+#     with torch.no_grad():
+#         for data, target in test_loader:
+#             data, target = data.to(device), target.to(device)
+#             data = data.view(-1, 28*28)
+#             output = model(data)
+#             test_loss += criterion(output, target).item()
+#             pred = output.argmax(dim=1, keepdim=True)
+#             correct += pred.eq(target.view_as(pred)).sum().item()
+#             all_preds.extend(pred.view(-1).tolist())
+#             all_targets.extend(target.view(-1).tolist())
+
+#     test_loss /= len(test_loader.dataset)
+#     accuracy = 100. * correct / len(test_loader.dataset)
+#     return test_loss, accuracy, all_preds, all_targets
 def evaluate_model(model, test_loader, criterion, device):
     model.eval()
-    test_loss = 0
+    running_loss = 0
     correct = 0
     all_preds = []
     all_targets = []
@@ -175,34 +195,52 @@ def evaluate_model(model, test_loader, criterion, device):
             data, target = data.to(device), target.to(device)
             data = data.view(-1, 28*28)
             output = model(data)
-            test_loss += criterion(output, target).item()
+            loss = criterion(output, target)
+            running_loss += loss.item()  # Accumulate the sum of the losses
             pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
             all_preds.extend(pred.view(-1).tolist())
             all_targets.extend(target.view(-1).tolist())
 
-    test_loss /= len(test_loader.dataset)
+    avg_loss = running_loss / len(test_loader)  # Divide by the number of batches
     accuracy = 100. * correct / len(test_loader.dataset)
-    return test_loss, accuracy, all_preds, all_targets
+    return avg_loss, accuracy, all_preds, all_targets
 
 def save_learning_curves(train_acc, val_acc, train_loss, val_loss, filename_prefix):
-    fig, axs = plt.subplots(2, 1, figsize=(10, 10))
+    # fig, axs = plt.subplots(2, 1, figsize=(10, 10))
     
-    # Plot accuracy
-    axs[0].plot(train_acc, label='Train Accuracy')
-    axs[0].plot(val_acc, label='Validation Accuracy')
-    axs[0].set_title('Accuracy vs. Number of Training Epochs')
-    axs[0].set_xlabel('Epochs')
-    axs[0].set_ylabel('Accuracy')
-    axs[0].legend(loc="best")
+    # # Plot accuracy
+    # axs[0].plot(train_acc, label='Train Accuracy')
+    # axs[0].plot(val_acc, label='Validation Accuracy')
+    # axs[0].set_title('Accuracy vs. Number of Training Epochs')
+    # axs[0].set_xlabel('Epochs')
+    # axs[0].set_ylabel('Accuracy')
+    # axs[0].legend(loc="best")
     
-    # Plot loss
-    axs[1].plot(train_loss, label='Train Loss')
-    axs[1].plot(val_loss, label='Validation Loss')
-    axs[1].set_title('Loss vs. Number of Training Epochs')
-    axs[1].set_xlabel('Epochs')
-    axs[1].set_ylabel('Loss')
-    axs[1].legend(loc="best")
+    # # Plot loss
+    # axs[1].plot(train_loss, label='Train Loss')
+    # axs[1].plot(val_loss, label='Validation Loss')
+    # axs[1].set_title('Loss vs. Number of Training Epochs')
+    # axs[1].set_xlabel('Epochs')
+    # axs[1].set_ylabel('Loss')
+    # axs[1].legend(loc="best")
+    plt.figure(figsize=(10,5))
+    plt.subplot(1,2,1)
+    plt.plot(train_acc, label= "Training Accuracy")
+    plt.plot(val_acc, label= "Validation Accuracy")
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
+    plt.title("Accuracy over epoch")
+    plt.legend()
+
+    # Plot training and validation loss
+    plt.subplot(1, 2, 2)
+    plt.plot(train_loss, label="Training Loss")
+    plt.plot(val_loss, label="Validation Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Loss vs. Epoch")
+    plt.legend()
 
     # Adjust the y-axis scale of the loss plot to zoom in on changes
     # axs[1].set_ylim([min(val_loss)*0.95, max(val_loss)*1.05])
@@ -212,6 +250,7 @@ def save_learning_curves(train_acc, val_acc, train_loss, val_loss, filename_pref
     
     # Save the figure in the "experiments" directory
     plt.savefig(os.path.join(experiments_dir, f"{filename_prefix}_learning_curves.png"))
+    plt.show()
     plt.close()
 
 def plot_confusion_matrix(cm, classes, config_details, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues, base_filename='confusion_matrix'):
