@@ -26,11 +26,11 @@ def copy_config_images_by_criteria(experiments_directory, target_directory_name=
 
 # Example usage:
 # To copy all images with ReLU activation function
-# copy_config_images_by_criteria("experiments", activation_function="ReLU")
+# copy_config_images_by_criteria("experiments", activation_function="random_normal")
 
 # To copy all images where initialization method is "random_normal"
-# copy_config_images_by_criteria("experiments", initialization_method="ones")
+copy_config_images_by_criteria("experiments", initialization_method="zeros")
 
 # You can also combine criteria
 # For example, to copy all images with ReLU activation function AND "random_normal" initialization
-copy_config_images_by_criteria("experiments", activation_function="linear", initialization_method="ones")
+# copy_config_images_by_criteria("experiments", activation_function="LeakyReLU", initialization_method="ones")
