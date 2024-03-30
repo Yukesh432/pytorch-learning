@@ -14,11 +14,11 @@ import os
 # Hyperparameters and model configurations
 config = {
     "num_of_hidden_layers": 1,
-    "num_of_hidden_units": 32,
+    "num_of_hidden_units": 1024,
     "learning_rate": 0.001,
     "optims": "SGD",  # Options: "SGD", "Adam", etc.
-    "activation_function": "Gelu",  # Options: "Sigmoid", "ReLU", etc.
-    "initialization_method": "he_normal",  # Options: "xavier_uniform", "he_normal", etc.
+    "activation_function": "Selu",  # Options: "Sigmoid", "ReLU", etc.
+    "initialization_method": "zeros",  # Options: "xavier_uniform", "he_normal", etc.
     "dropout_percentage": None,
     "batch_size": 64,
     "epochs": 50000,
@@ -100,23 +100,31 @@ class ANN(nn.Module):
         for layer in self.model_layers:
             print("LAYERS PRINTED!!!!!!!!!!!!!!")
             print(layer)
-            if hasattr(layer, 'weight'):
+            if hasattr(layer, 'weight') and hasattr(layer, 'bias'):
                 if config.get("initialization_method", "") == "xavier_uniform":
                     nn.init.xavier_uniform_(layer.weight)
+                    nn.init.zeros_(layer.bias)
                 elif config.get("initialization_method", "") == "xavier_normal":
+                    nn.init.zeros_(layer.bias)
                     nn.init.xavier_normal_(layer.weight)
                 elif config.get("initialization_method", "") == "he_uniform":
-                    nn.init.kaiming_uniform_(layer.weight, nonlinearity="relu")
+                    nn.init.zeros_(layer.bias)
+                    nn.init.kaiming_uniform_(layer.weight, nonlinearity= "relu")
                 elif config.get("initialization_method", "") == "he_normal":
+                    nn.init.zeros_(layer.bias)
                     nn.init.kaiming_normal_(layer.weight, nonlinearity= "relu")
                 elif config.get("initialization_method", "") == "ones":
                     nn.init.ones_(layer.weight)
                 elif config.get("initialization_method", "") == "zeros":
                     print("Zero initialization ...............")
                     nn.init.zeros_(layer.weight)
+                    nn.init.zeros_(layer.bias)
+                    print(layer.bias)
                 elif config.get("initialization_method", "") == "random_normal":
+                    nn.init.zeros_(layer.bias)
                     nn.init.normal_(layer.weight)
                 elif config.get("initialization_method", "") == "random_uniform":
+                    nn.init.zeros_(layer.bias)
                     nn.init.uniform_(layer.weight)
                 else:
                     print("Not a valid initialization method.........")
