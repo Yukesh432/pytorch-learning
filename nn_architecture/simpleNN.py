@@ -124,7 +124,7 @@ class ANN(nn.Module):
                     nn.init.zeros_(layer.bias)
                     nn.init.normal_(layer.weight)
                 elif config.get("initialization_method", "") == "random_uniform":
-                    nn.init.zeros_(layer.bias)
+                    nn.init.ones_(layer.bias)
                     nn.init.uniform_(layer.weight)
                 else:
                     print("Not a valid initialization method.........")
