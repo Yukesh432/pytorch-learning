@@ -103,28 +103,30 @@ class ANN(nn.Module):
             if hasattr(layer, 'weight') and hasattr(layer, 'bias'):
                 if config.get("initialization_method", "") == "xavier_uniform":
                     nn.init.xavier_uniform_(layer.weight)
-                    nn.init.zeros_(layer.bias)
+                    nn.init.xavier_uniform_(layer.bias)
                 elif config.get("initialization_method", "") == "xavier_normal":
-                    nn.init.zeros_(layer.bias)
+                    nn.init.xavier_normal(layer.bias)
                     nn.init.xavier_normal_(layer.weight)
+                    nn.init.xavier_normal_(layer.bias)
                 elif config.get("initialization_method", "") == "he_uniform":
-                    nn.init.zeros_(layer.bias)
+                    nn.init.kaiming_uniform_(layer.bias)
                     nn.init.kaiming_uniform_(layer.weight, nonlinearity= "relu")
                 elif config.get("initialization_method", "") == "he_normal":
-                    nn.init.zeros_(layer.bias)
+                    nn.init.kaiming_normal_(layer.bias)
                     nn.init.kaiming_normal_(layer.weight, nonlinearity= "relu")
                 elif config.get("initialization_method", "") == "ones":
                     nn.init.ones_(layer.weight)
+                    nn.init.ones_(layer.bias)
                 elif config.get("initialization_method", "") == "zeros":
                     print("Zero initialization ...............")
                     nn.init.zeros_(layer.weight)
                     nn.init.zeros_(layer.bias)
-                    print(layer.bias)
+                    # print(layer.bias)
                 elif config.get("initialization_method", "") == "random_normal":
-                    nn.init.zeros_(layer.bias)
+                    nn.init.normal_(layer.bias)
                     nn.init.normal_(layer.weight)
                 elif config.get("initialization_method", "") == "random_uniform":
-                    nn.init.ones_(layer.bias)
+                    nn.init.uniform_(layer.bias)
                     nn.init.uniform_(layer.weight)
                 else:
                     print("Not a valid initialization method.........")
