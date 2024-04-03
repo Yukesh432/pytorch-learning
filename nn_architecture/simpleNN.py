@@ -14,11 +14,11 @@ import os
 # Hyperparameters and model configurations
 config = {
     "num_of_hidden_layers": 1,
-    "num_of_hidden_units": 1024,
+    "num_of_hidden_units": 64,
     "learning_rate": 0.001,
     "optims": "SGD",  # Options: "SGD", "Adam", etc.
-    "activation_function": "Selu",  # Options: "Sigmoid", "ReLU", etc.
-    "initialization_method": "zeros",  # Options: "xavier_uniform", "he_normal", etc.
+    "activation_function": "linear",  # Options: "Sigmoid", "ReLU", etc.
+    "initialization_method": "random_uniform",  # Options: "xavier_uniform", "he_normal", etc.
     "dropout_percentage": None,
     "batch_size": 64,
     "epochs": 50000,
@@ -96,44 +96,51 @@ class ANN(nn.Module):
         for i in range(len(layers) - 1):
             self.model_layers.append(nn.Linear(layers[i], layers[i+1]))
         
+        self.activations= []
+        self.gradients= []
+
         # apply initialization method to each layer
         for layer in self.model_layers:
             print("LAYERS PRINTED!!!!!!!!!!!!!!")
             print(layer)
-            if hasattr(layer, 'weight') and hasattr(layer, 'bias'):
+            if hasattr(layer, 'weight'):
                 if config.get("initialization_method", "") == "xavier_uniform":
                     nn.init.xavier_uniform_(layer.weight)
-                    nn.init.xavier_uniform_(layer.bias)
+                    
                 elif config.get("initialization_method", "") == "xavier_normal":
-                    nn.init.xavier_normal(layer.bias)
                     nn.init.xavier_normal_(layer.weight)
-                    nn.init.xavier_normal_(layer.bias)
+                  
                 elif config.get("initialization_method", "") == "he_uniform":
-                    nn.init.kaiming_uniform_(layer.bias)
                     nn.init.kaiming_uniform_(layer.weight, nonlinearity= "relu")
                 elif config.get("initialization_method", "") == "he_normal":
-                    nn.init.kaiming_normal_(layer.bias)
                     nn.init.kaiming_normal_(layer.weight, nonlinearity= "relu")
                 elif config.get("initialization_method", "") == "ones":
                     nn.init.ones_(layer.weight)
-                    nn.init.ones_(layer.bias)
                 elif config.get("initialization_method", "") == "zeros":
                     print("Zero initialization ...............")
                     nn.init.zeros_(layer.weight)
-                    nn.init.zeros_(layer.bias)
-                    # print(layer.bias)
                 elif config.get("initialization_method", "") == "random_normal":
                     nn.init.normal_(layer.bias)
                     nn.init.normal_(layer.weight)
                 elif config.get("initialization_method", "") == "random_uniform":
-                    nn.init.uniform_(layer.bias)
+                    # nn.init.normal_(layer.bias)
                     nn.init.uniform_(layer.weight)
                 else:
                     print("Not a valid initialization method.........")
+            # register hook to store activation
+            layer.register_forward_hook(self.save_activation)
+
+            # register hook to store gradients
+            # layer.weight.register_hook(lambda grad: self.gradients.append(grad))
+
 
             print("WEIGHT INITIALIZED")
-        # self.activation= config.get("activation_function", "")
-        # print("ACTIVATION FUNCTION IS BEING APPLIED")
+
+    def save_activation(self, module, input, output):
+        self.activations.append(output.detach())
+
+    # def save_gradient(self, grad):
+    #     self.gradients.append(grad.detach())
 
     def apply_activation(self, x):
         self.activation= config['activation_function']
@@ -144,7 +151,8 @@ class ANN(nn.Module):
             # print("RELU FUNCTION ACTIVATEDDDDD")
             return F.relu(x)
         elif self.activation == "Sigmoid":
-            return F.sigmoid(x)
+            # return F.sigmoid(x)
+            return torch.sigmoid(x)
         elif self.activation == "Tanh":
             return F.tanh(x)
         elif self.activation == "LeakyReLU":
@@ -166,6 +174,9 @@ class ANN(nn.Module):
         # return x
 
     def forward(self, x):
+        # self.activations= []
+        # self.gradients= []
+
         for _, layer in enumerate(self.model_layers[:-1]):  # Exclude the last layer for activation
             x = layer(x)
             x = self.apply_activation(x)
@@ -194,6 +205,37 @@ class ANN(nn.Module):
 #     test_loss /= len(test_loader.dataset)
 #     accuracy = 100. * correct / len(test_loader.dataset)
 #     return test_loss, accuracy, all_preds, all_targets
+    
+def plot_histograms(activations_list, gradients_list):
+    # Get the number of layers from the activations list
+    num_layers = len(activations_list)
+
+    # Create a color map that has one color for each layer
+    color_map = plt.cm.viridis(np.linspace(0, 1, num_layers)) if num_layers > 1 else ['blue']
+
+    # Plot activation histograms
+    plt.figure(figsize=(12, 6))
+    # Generate a single histogram with all layers for activations
+    all_activations = np.concatenate([np.array(a).flatten() for a in activations_list])
+    plt.hist(all_activations, bins=50, color='blue', label='Activations', alpha=0.5, histtype='step')
+    plt.title('Activation values normalized histogram')
+    plt.xlabel('Activation Value')
+    plt.ylabel('Frequency')
+    plt.legend(loc='best')
+    plt.show()
+
+    # Plot gradient histograms
+    plt.figure(figsize=(12, 6))
+    # Generate a single histogram with all layers for gradients
+    all_gradients = np.concatenate([np.array(g).flatten() for g in gradients_list])
+    plt.hist(all_gradients, bins=50, color='red', label='Gradients', alpha=0.5, histtype='step')
+    plt.title('Backpropagated gradients normalized histogram')
+    plt.xlabel('Gradient Value')
+    plt.ylabel('Frequency')
+    plt.legend(loc='best')
+    plt.show()
+
+
 def evaluate_model(model, test_loader, criterion, device):
     model.eval()
     running_loss = 0
@@ -273,7 +315,7 @@ def plot_confusion_matrix(cm, classes, config_details, normalize=False, title='C
     filename = f"{base_filename}_{config_string}.png"
 
     # Ensure the "experiments" directory exists and save the figure there
-    experiments_dir = "experiments"
+    experiments_dir = "re-experiments"
     os.makedirs(experiments_dir, exist_ok=True)
     plt.savefig(os.path.join(experiments_dir, filename), bbox_inches='tight')
     plt.close()
@@ -323,6 +365,7 @@ def main():
 
     # Model, loss criterion, and optimizer setup
     model = ANN(config).to(device)
+
     criterion = nn.CrossEntropyLoss()
     if config['optims']== 'SGD':
         optimizer= optim.SGD(model.parameters(), lr= config['learning_rate'])
@@ -342,6 +385,8 @@ def main():
     early_stopping_epoch= None
     for epoch in range(1, config["epochs"] + 1):
         model.train()
+        model.activations = []  # Reset activations list at the start of each epoch
+        model_gradients = []    # Reset gradients list at the start of each epoch
         train_loss = 0
         correct = 0
         total = 0
@@ -352,8 +397,14 @@ def main():
             output = model(data)
             loss = criterion(output, target)
             loss.backward()
-            optimizer.step()
 
+            # Manually collect gradients
+            for name, param in model.named_parameters():
+                if param.requires_grad:
+                    # We clone the gradient to "freeze" it, then detach and move it to cpu
+                    model_gradients.append(param.grad.clone().detach().cpu().numpy())
+
+            optimizer.step()
             train_loss += loss.item()
             _, predicted = torch.max(output.data, 1)
             total += target.size(0)
@@ -367,6 +418,14 @@ def main():
         val_accuracies.append(val_accuracy)
 
         print(f'Epoch {epoch}: Train Loss: {train_losses[-1]:.4f}, Train Acc: {train_accuracies[-1]:.2f}%, Val Loss: {val_losses[-1]:.4f}, Val Acc: {val_accuracies[-1]:.2f}%')
+        # Optional: Plot histograms after a certain number of epochs, e.g., every 5 epochs
+        if epoch % 10 == 0:
+            activations_list = [activation_layer.cpu().numpy().flatten() for activation_layer in model.activations]
+            gradients_list = [np.array(grad).flatten() for grad in model_gradients]
+            print("GRADIENT LIST IS SHOWN HERE...............")
+            print(model_gradients)
+            plot_histograms(activations_list, gradients_list)
+        
 
         early_stopping(val_loss, model)
 
@@ -402,9 +461,11 @@ def main():
     save_learning_curves(train_accuracies, val_accuracies, train_losses, val_losses, filename_prefix)
 
 
+
+
 if __name__ == "__main__":
     # Ensure the "experiments" directory exists
-    experiments_dir = "experiments"
+    experiments_dir = "re-experiments"
     if not os.path.exists(experiments_dir):
         os.makedirs(experiments_dir)
     main()
