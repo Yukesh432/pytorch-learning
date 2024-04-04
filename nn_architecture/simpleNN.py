@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 import time
 import csv
 import itertools
@@ -17,8 +18,8 @@ config = {
     "num_of_hidden_units": 64,
     "learning_rate": 0.001,
     "optims": "SGD",  # Options: "SGD", "Adam", etc.
-    "activation_function": "linear",  # Options: "Sigmoid", "ReLU", etc.
-    "initialization_method": "random_uniform",  # Options: "xavier_uniform", "he_normal", etc.
+    "activation_function": "ReLU",  # Options: "Sigmoid", "ReLU", etc.
+    "initialization_method": "xavier_uniform",  # Options: "xavier_uniform", "he_normal", etc.
     "dropout_percentage": None,
     "batch_size": 64,
     "epochs": 50000,
@@ -112,16 +113,21 @@ class ANN(nn.Module):
                   
                 elif config.get("initialization_method", "") == "he_uniform":
                     nn.init.kaiming_uniform_(layer.weight, nonlinearity= "relu")
+
                 elif config.get("initialization_method", "") == "he_normal":
                     nn.init.kaiming_normal_(layer.weight, nonlinearity= "relu")
+
                 elif config.get("initialization_method", "") == "ones":
                     nn.init.ones_(layer.weight)
+
                 elif config.get("initialization_method", "") == "zeros":
                     print("Zero initialization ...............")
                     nn.init.zeros_(layer.weight)
+
                 elif config.get("initialization_method", "") == "random_normal":
                     nn.init.normal_(layer.bias)
                     nn.init.normal_(layer.weight)
+
                 elif config.get("initialization_method", "") == "random_uniform":
                     # nn.init.normal_(layer.bias)
                     nn.init.uniform_(layer.weight)
@@ -206,33 +212,30 @@ class ANN(nn.Module):
 #     accuracy = 100. * correct / len(test_loader.dataset)
 #     return test_loss, accuracy, all_preds, all_targets
     
-def plot_histograms(activations_list, gradients_list):
-    # Get the number of layers from the activations list
-    num_layers = len(activations_list)
 
-    # Create a color map that has one color for each layer
-    color_map = plt.cm.viridis(np.linspace(0, 1, num_layers)) if num_layers > 1 else ['blue']
+def plot_histograms(activations_list, gradients_list):
+    sns.set(style="whitegrid")  # Set the seaborn style
 
     # Plot activation histograms
     plt.figure(figsize=(12, 6))
     # Generate a single histogram with all layers for activations
     all_activations = np.concatenate([np.array(a).flatten() for a in activations_list])
-    plt.hist(all_activations, bins=50, color='blue', label='Activations', alpha=0.5, histtype='step')
-    plt.title('Activation values normalized histogram')
+    sns.histplot(all_activations, bins=50, color='dodgerblue', kde=True, label='Activations')
+    plt.title('Activation Values Distribution')
     plt.xlabel('Activation Value')
-    plt.ylabel('Frequency')
-    plt.legend(loc='best')
+    plt.ylabel('Density')
+    plt.legend()
     plt.show()
 
     # Plot gradient histograms
     plt.figure(figsize=(12, 6))
     # Generate a single histogram with all layers for gradients
     all_gradients = np.concatenate([np.array(g).flatten() for g in gradients_list])
-    plt.hist(all_gradients, bins=50, color='red', label='Gradients', alpha=0.5, histtype='step')
-    plt.title('Backpropagated gradients normalized histogram')
+    sns.histplot(all_gradients, bins=50, color='salmon', kde=True, label='Gradients')
+    plt.title('Gradient Values Distribution')
     plt.xlabel('Gradient Value')
-    plt.ylabel('Frequency')
-    plt.legend(loc='best')
+    plt.ylabel('Density')
+    plt.legend()
     plt.show()
 
 
@@ -419,11 +422,11 @@ def main():
 
         print(f'Epoch {epoch}: Train Loss: {train_losses[-1]:.4f}, Train Acc: {train_accuracies[-1]:.2f}%, Val Loss: {val_losses[-1]:.4f}, Val Acc: {val_accuracies[-1]:.2f}%')
         # Optional: Plot histograms after a certain number of epochs, e.g., every 5 epochs
-        if epoch % 10 == 0:
+        if epoch % 30 == 0:
             activations_list = [activation_layer.cpu().numpy().flatten() for activation_layer in model.activations]
             gradients_list = [np.array(grad).flatten() for grad in model_gradients]
             print("GRADIENT LIST IS SHOWN HERE...............")
-            print(model_gradients)
+            # print(model_gradients)
             plot_histograms(activations_list, gradients_list)
         
 
