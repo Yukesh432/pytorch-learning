@@ -15,8 +15,8 @@ import os
 # Hyperparameters and model configurations
 config = {
     "num_of_hidden_layers": 1,
-    "num_of_hidden_units": 64,
-    "learning_rate": 0.001,
+    "num_of_hidden_units": 512,
+    "learning_rate": 0.01,
     "optims": "SGD",  # Options: "SGD", "Adam", etc.
     "activation_function": "ReLU",  # Options: "Sigmoid", "ReLU", etc.
     "initialization_method": "xavier_uniform",  # Options: "xavier_uniform", "he_normal", etc.
@@ -125,7 +125,7 @@ class ANN(nn.Module):
                     nn.init.zeros_(layer.weight)
 
                 elif config.get("initialization_method", "") == "random_normal":
-                    nn.init.normal_(layer.bias)
+                    # nn.init.normal_(layer.bias)
                     nn.init.normal_(layer.weight)
 
                 elif config.get("initialization_method", "") == "random_uniform":
@@ -318,7 +318,7 @@ def plot_confusion_matrix(cm, classes, config_details, normalize=False, title='C
     filename = f"{base_filename}_{config_string}.png"
 
     # Ensure the "experiments" directory exists and save the figure there
-    experiments_dir = "re-experiments"
+    experiments_dir = "experiments"
     os.makedirs(experiments_dir, exist_ok=True)
     plt.savefig(os.path.join(experiments_dir, filename), bbox_inches='tight')
     plt.close()
@@ -468,7 +468,7 @@ def main():
 
 if __name__ == "__main__":
     # Ensure the "experiments" directory exists
-    experiments_dir = "re-experiments"
+    experiments_dir = "experiments"
     if not os.path.exists(experiments_dir):
         os.makedirs(experiments_dir)
     main()
