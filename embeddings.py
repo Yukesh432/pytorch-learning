@@ -11,3 +11,16 @@ m= 10
 #  i.e 
 embedding= nn.Embedding(n,m)
 print(embedding)
+
+print("The embedding values are accesed by indexing\n")
+#  Accessing the elements of embedding by indexing
+example= embedding(torch.LongTensor([4]))
+print(example)
+
+# accessing the embedding weights
+print(embedding.weight)
+
+# initializing embedding weights by different initialization 
+
+init1= nn.init.kaiming_normal_(embedding.weight, nonlinearity='relu')
+init2= nn.init.xavier_uniform_(embedding.weight)
