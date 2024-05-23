@@ -10,6 +10,8 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import torch.optim as optim
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 
 
@@ -107,7 +109,7 @@ class LstmNetwork(nn.Module):
 
 
 def load_dataset(csv_filepath):
-    return pd.read_csv(csv_filepath, nrows=1000)
+    return pd.read_csv(csv_filepath, nrows=5000)
 
 
 def preprocess_data(data):
@@ -158,49 +160,76 @@ def preprocess_data(data):
 
 
 
-if __name__== "__main__":
-    epoch_bar = tqdm(range(10),
-                 desc="Training",
-                 position=0,
-                 total=2)
-    acc=0
+if __name__ == "__main__":
+    device = torch.device('cpu')
+    classifier = LstmNetwork().to(device)
+    optimizer = optim.Adam(classifier.parameters(), lr=0.001)
+    criterion = nn.CrossEntropyLoss()
 
-    device= torch.device('cpu')
-    classifier= LstmNetwork().to(device)
-    optimizer= optim.Adam(classifier.parameters(), lr= 0.001)
-    criterion= nn.CrossEntropyLoss()
+    df = load_dataset('data/reviews/Reviews.csv')
+    train_loader, test_loader = preprocess_data(df)
+
+    train_losses = []
+    test_losses = []
+    test_accuracies = []
+
+    for epoch in range(1000):
+        print(f"Epoch {epoch+1}/100")
+        total_train_loss = 0
+        total_correct_train = 0
         
-    df= load_dataset('data/reviews/Reviews.csv')
-    train_loader, test_loader= preprocess_data(df)
-    
-    for epoch in tqdm(range(10), desc="training", position=0, total=2):
-        batch_bar= tqdm(enumerate(train_loader), desc="Epoch: {}".format(str(epoch)),
-                        position=1, total=len(train_loader))
-        
-        for i, (datapoint, labels) in batch_bar:
+        classifier.train()
+        for i, (datapoints, labels) in tqdm(enumerate(train_loader), total=len(train_loader), desc="Training"):
             optimizer.zero_grad()
-
-            preds= classifier(datapoint.long().to(device))
-            loss= criterion(preds, labels).to(device)
+            preds = classifier(datapoints.to(device).long())
+            loss = criterion(preds, labels.to(device))
             loss.backward()
             optimizer.step()
-            if (i + 1) % 50 == 0:
-                acc = 0
-                
-                with torch.no_grad():
-                    for  i, (datapoints_, labels_) in enumerate(test_loader):
-                        preds = classifier(datapoints_.to(device))
-                        acc += (preds.argmax(dim=1) == labels_.to(device)).float().sum().cpu().item()
-                # acc /= len(X_test)
-                acc /= 161
-
-            batch_bar.set_postfix(loss=loss.cpu().item(),
-                                accuracy="{:.2f}".format(acc),
-                                epoch=epoch)
-            batch_bar.update()
-
             
-        epoch_bar.set_postfix(loss=loss.cpu().item(),
-                            accuracy="{:.2f}".format(acc),
-                            epoch=epoch)
-        epoch_bar.update()
+            total_train_loss += loss.item()
+            total_correct_train += (preds.argmax(dim=1) == labels.to(device)).float().sum().item()
+            
+        train_loss = total_train_loss / len(train_loader)
+        train_accuracy = total_correct_train / len(train_loader.dataset)
+        train_losses.append(train_loss)
+        print(f"Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}")
+        
+        classifier.eval()
+        total_correct_test = 0
+        total_test_loss = 0
+        
+        all_preds = []
+        all_labels = []
+        
+        with torch.no_grad():
+            for i, (datapoints_, labels_) in tqdm(enumerate(test_loader), total=len(test_loader), desc="Testing"):
+                preds = classifier(datapoints_.to(device).long())
+                loss = criterion(preds, labels_.to(device))
+                total_test_loss += loss.item()
+                total_correct_test += (preds.argmax(dim=1) == labels_.to(device)).float().sum().item()
+                
+                all_preds.extend(preds.argmax(dim=1).cpu().numpy())
+                all_labels.extend(labels_.cpu().numpy())
+                
+        test_loss = total_test_loss / len(test_loader)
+        test_accuracy = total_correct_test / len(test_loader.dataset)
+        test_losses.append(test_loss)
+        test_accuracies.append(test_accuracy)
+        print(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
+
+    # Plotting training and test loss curves
+    plt.figure(figsize=(10, 5))
+    plt.plot(train_losses, label='Train Loss')
+    plt.plot(test_losses, label='Test Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.title('Training and Test Loss')
+    plt.show()
+
+    # Confusion matrix
+    cm = confusion_matrix(all_labels, all_preds)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Negative', 'Positive'])
+    disp.plot(cmap=plt.cm.Blues)
+    plt.title('Confusion Matrix')
+    plt.show()
