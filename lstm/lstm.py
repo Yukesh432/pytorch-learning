@@ -95,9 +95,9 @@ class LstmNetwork(nn.Module):
     def __init__(self,dropout_prob:float=0.5):
         super().__init__()
         # self.embedding = nn.Embedding(100, 32)
-        self.lstm = CustomLSTM(200, 32, dropout_prob)
+        self.lstm = CustomLSTM(200, 1, dropout_prob)
         self.dropout= nn.Dropout(dropout_prob)
-        self.fc1 = nn.Linear(32, 1)
+        self.fc1 = nn.Linear(1, 1)
 
     
     def forward(self, x):
@@ -106,10 +106,11 @@ class LstmNetwork(nn.Module):
         x_ = (x_[:, -1, :])
         x_= self.dropout(x_)
         x_ = self.fc1(x_)
+        
         return x_
     
 def load_dataset(csv_filepath):
-    return pd.read_csv(csv_filepath, nrows=5000)
+    return pd.read_csv(csv_filepath, nrows=10000)
 
 
 def preprocess_data(data):
@@ -187,7 +188,7 @@ if __name__ == "__main__":
     test_losses = []
     test_accuracies = []
 
-    for epoch in range(100):
+    for epoch in range(500):
         print(f"Epoch {epoch+1}/20")
         total_train_loss = 0
         total_correct_train = 0
