@@ -13,7 +13,7 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
-
+import gensim.downloader as api
 
 """
 Equation of LSTM cells:
@@ -28,86 +28,86 @@ f. h_t= o_t * tanh(C_t)
 
 
 class CustomLSTM(nn.Module):
-    def __init__(self, input_size:int, hidden_size:int):
+    def __init__(self, input_size:int, hidden_size:int, dropout_prob:float=0.5):
         super().__init__()
-        self.input_size= input_size
-        self.hidden_size= hidden_size
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.dropout = nn.Dropout(dropout_prob)
 
-        # Weight intitialization for input gate(i_t)
-        self.U_i= nn.Parameter(torch.Tensor(input_size, hidden_size))
-        self.V_i= nn.Parameter(torch.Tensor(input_size, hidden_size))
-        self.b_i= nn.Parameter(torch.Tensor(hidden_size))
+        # Weight initialization for input gate (i_t)
+        self.U_i = nn.Parameter(torch.Tensor(input_size, hidden_size))
+        self.V_i = nn.Parameter(torch.Tensor(hidden_size, hidden_size))
+        self.b_i = nn.Parameter(torch.Tensor(hidden_size))
 
         # Forget gate
-        self.U_f= nn.Parameter(torch.Tensor(input_size, hidden_size))
-        self.V_f= nn.Parameter(torch.Tensor(input_size, hidden_size))
-        self.b_f= nn.Parameter(torch.Tensor(hidden_size))
+        self.U_f = nn.Parameter(torch.Tensor(input_size, hidden_size))
+        self.V_f = nn.Parameter(torch.Tensor(hidden_size, hidden_size))
+        self.b_f = nn.Parameter(torch.Tensor(hidden_size))
 
         # C_t
-        self.U_c= nn.Parameter(torch.Tensor(input_size, hidden_size))
-        self.V_c= nn.Parameter(torch.Tensor(input_size, hidden_size))
-        self.b_c= nn.Parameter(torch.Tensor(hidden_size))
+        self.U_c = nn.Parameter(torch.Tensor(input_size, hidden_size))
+        self.V_c = nn.Parameter(torch.Tensor(hidden_size, hidden_size))
+        self.b_c = nn.Parameter(torch.Tensor(hidden_size))
 
         # o_t
-        self.U_o= nn.Parameter(torch.Tensor(input_size, hidden_size))
-        self.V_o= nn.Parameter(torch.Tensor(input_size, hidden_size))
-        self.b_o= nn.Parameter(torch.Tensor(hidden_size))
+        self.U_o = nn.Parameter(torch.Tensor(input_size, hidden_size))
+        self.V_o = nn.Parameter(torch.Tensor(hidden_size, hidden_size))
+        self.b_o = nn.Parameter(torch.Tensor(hidden_size))
         
         self.init_weights()
 
-    
     def init_weights(self):
-        stdv= 1.0/math.sqrt(self.hidden_size)
+        stdv = 1.0 / math.sqrt(self.hidden_size)
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
 
-
     # Feed forward operation
-    def forward(self, x, init_states= None):
+    def forward(self, x, init_states=None):
         """Here X.shape is in the form of (batch_size, sequence_size, input_size)"""
-        batch_size, seq_size, _= x.size()
-        hidden_seq= []
+        batch_size, seq_size, _ = x.size()
+        hidden_seq = []
 
         if init_states is None:
-            h_t, c_t= (torch.zeros(batch_size, self.hidden_size).to(x.device),
-                       torch.zeros(batch_size, self.hidden_size).to(x.device))
+            h_t, c_t = (torch.zeros(batch_size, self.hidden_size).to(x.device),
+                        torch.zeros(batch_size, self.hidden_size).to(x.device))
         else:
-            h_t, c_t= init_states
+            h_t, c_t = init_states
         
         for t in range(seq_size):
-            x_t= x[:, t, :]
+            x_t = x[:, t, :]
 
-            i_t= torch.sigmoid(x_t @ self.U_i+ h_t@ self.V_i + self.b_i)
-            f_t= torch.sigmoid(x_t @ self.U_f + h_t@ self.V_f + self.b_f)
-            g_t= torch.tanh(x_t @ self.U_c + h_t @ self.V_c + self.b_c)
-            o_t= torch.sigmoid(x_t @ self.U_o + h_t@self.V_o + self.b_o)
-            c_t= f_t * c_t + i_t *g_t
-            h_t= o_t * torch.tanh(c_t)
+            i_t = torch.sigmoid(x_t @ self.U_i + h_t @ self.V_i + self.b_i)
+            f_t = torch.sigmoid(x_t @ self.U_f + h_t @ self.V_f + self.b_f)
+            g_t = torch.tanh(x_t @ self.U_c + h_t @ self.V_c + self.b_c)
+            o_t = torch.sigmoid(x_t @ self.U_o + h_t @ self.V_o + self.b_o)
+            c_t = f_t * c_t + i_t * g_t
+            h_t = o_t * torch.tanh(c_t)
 
             hidden_seq.append(h_t.unsqueeze(0))
 
         # reshape hidden sequence
-        hidden_seq= torch.cat(hidden_seq, dim=0)
-        hidden_seq= hidden_seq.transpose(0,1).contiguous()
+        hidden_seq = torch.cat(hidden_seq, dim=0)
+        hidden_seq = hidden_seq.transpose(0, 1).contiguous()
         return hidden_seq, (h_t, c_t)
-    
+
 
 class LstmNetwork(nn.Module):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self,dropout_prob:float=0.5):
         super().__init__()
-        self.embedding= nn.Embedding(500, 32)
-        self.lstm= CustomLSTM(32, 32)
-        self.fc1= nn.Linear(32, 2)
+        # self.embedding = nn.Embedding(100, 32)
+        self.lstm = CustomLSTM(200, 32, dropout_prob)
+        self.dropout= nn.Dropout(dropout_prob)
+        self.fc1 = nn.Linear(32, 1)
+
     
-    def forward(self,x):
-        x_= self.embedding(x)
-        x_, (h_n, c_n )= self.lstm(x_)
-        x_= (x_[:, -1, :])
-        x_= self.fc1(x_)
+    def forward(self, x):
+        # x_ = self.embedding(x)
+        x_, (h_n, c_n) = self.lstm(x)
+        x_ = (x_[:, -1, :])
+        x_= self.dropout(x_)
+        x_ = self.fc1(x_)
         return x_
-
-
-
+    
 def load_dataset(csv_filepath):
     return pd.read_csv(csv_filepath, nrows=5000)
 
@@ -129,12 +129,27 @@ def preprocess_data(data):
     text_as_list= df['text'].tolist()
     labels_as_list= df['labels'].tolist()
 
-    vectorizer= TfidfVectorizer(max_features=50)
-    encoded_text= vectorizer.fit_transform(text_as_list)
+    # vectorizer= TfidfVectorizer(max_features=100, sublinear_tf=True)
+    # encoded_text= vectorizer.fit_transform(text_as_list)
 
-    encoded_text_as_list= encoded_text.toarray().tolist()
+    # encoded_text_as_list= encoded_text.toarray().tolist()
     
-    
+        # Load the pre-trained GloVe model
+    # model = api.load("glove-twitter-25")
+    # model = api.load("glove-wiki-gigaword-100")
+    model = api.load("glove-wiki-gigaword-200")
+
+    def encode_text(text, model, max_seq_len=100):
+        words = text.split()
+        words = words[:max_seq_len]  # Trim to max sequence length
+        embedding = np.zeros((max_seq_len, model.vector_size))
+        for i, word in enumerate(words):
+            if word in model:
+                embedding[i] = model[word]
+        return embedding
+
+    encoded_text_as_list = [encode_text(text, model) for text in text_as_list]
+
     labels= [1 if labels_as_list[i] == 'positive' else 0 for i in range(len(encoded_text_as_list))]
 
     X= torch.Tensor(encoded_text_as_list)
@@ -145,8 +160,8 @@ def preprocess_data(data):
     ds_train= torch.utils.data.TensorDataset(X_train, y_train)
     ds_test= torch.utils.data.TensorDataset(X_test, y_test)
 
-    train_loader= torch.utils.data.DataLoader(ds_train, batch_size=6, shuffle=True)
-    test_loader= torch.utils.data.DataLoader(ds_test, batch_size=6, shuffle=True)
+    train_loader= torch.utils.data.DataLoader(ds_train, batch_size=16, shuffle=True)
+    test_loader= torch.utils.data.DataLoader(ds_test, batch_size=16, shuffle=True)
     print(len(X_test))
 
     # for batch_idx, batch in enumerate(train_loader):
@@ -159,12 +174,11 @@ def preprocess_data(data):
 
 
 
-
 if __name__ == "__main__":
     device = torch.device('cpu')
     classifier = LstmNetwork().to(device)
-    optimizer = optim.Adam(classifier.parameters(), lr=0.001)
-    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(classifier.parameters(), lr=0.005)
+    criterion = nn.BCEWithLogitsLoss()
 
     df = load_dataset('data/reviews/Reviews.csv')
     train_loader, test_loader = preprocess_data(df)
@@ -173,21 +187,21 @@ if __name__ == "__main__":
     test_losses = []
     test_accuracies = []
 
-    for epoch in range(1000):
-        print(f"Epoch {epoch+1}/100")
+    for epoch in range(100):
+        print(f"Epoch {epoch+1}/20")
         total_train_loss = 0
         total_correct_train = 0
         
         classifier.train()
         for i, (datapoints, labels) in tqdm(enumerate(train_loader), total=len(train_loader), desc="Training"):
             optimizer.zero_grad()
-            preds = classifier(datapoints.to(device).long())
-            loss = criterion(preds, labels.to(device))
+            preds = classifier(datapoints.to(device)).squeeze(1)
+            loss = criterion(preds, labels.to(device).float())  # Change labels to float for BCEWithLogitsLoss
             loss.backward()
             optimizer.step()
             
             total_train_loss += loss.item()
-            total_correct_train += (preds.argmax(dim=1) == labels.to(device)).float().sum().item()
+            total_correct_train += ((torch.sigmoid(preds) > 0.5) == labels.to(device)).float().sum().item()
             
         train_loss = total_train_loss / len(train_loader)
         train_accuracy = total_correct_train / len(train_loader.dataset)
@@ -203,12 +217,12 @@ if __name__ == "__main__":
         
         with torch.no_grad():
             for i, (datapoints_, labels_) in tqdm(enumerate(test_loader), total=len(test_loader), desc="Testing"):
-                preds = classifier(datapoints_.to(device).long())
-                loss = criterion(preds, labels_.to(device))
+                preds = classifier(datapoints_.to(device)).squeeze(1)
+                loss = criterion(preds, labels_.to(device).float())
                 total_test_loss += loss.item()
-                total_correct_test += (preds.argmax(dim=1) == labels_.to(device)).float().sum().item()
+                total_correct_test += ((torch.sigmoid(preds) > 0.5) == labels_.to(device)).float().sum().item()
                 
-                all_preds.extend(preds.argmax(dim=1).cpu().numpy())
+                all_preds.extend((torch.sigmoid(preds) > 0.5).cpu().numpy())
                 all_labels.extend(labels_.cpu().numpy())
                 
         test_loss = total_test_loss / len(test_loader)
