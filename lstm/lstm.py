@@ -28,7 +28,7 @@ f. h_t= o_t * tanh(C_t)
 
 
 class CustomLSTM(nn.Module):
-    def __init__(self, input_size:int, hidden_size:int, dropout_prob:float=0.5):
+    def __init__(self, input_size:int, hidden_size:int, dropout_prob:float=0.4):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -92,10 +92,10 @@ class CustomLSTM(nn.Module):
 
 
 class LstmNetwork(nn.Module):
-    def __init__(self,dropout_prob:float=0.5):
+    def __init__(self,dropout_prob:float=0.4):
         super().__init__()
         # self.embedding = nn.Embedding(100, 32)
-        self.lstm = CustomLSTM(200, 1, dropout_prob)
+        self.lstm = CustomLSTM(300, 1, dropout_prob)
         self.dropout= nn.Dropout(dropout_prob)
         self.fc1 = nn.Linear(1, 1)
 
@@ -110,7 +110,7 @@ class LstmNetwork(nn.Module):
         return x_
     
 def load_dataset(csv_filepath):
-    return pd.read_csv(csv_filepath, nrows=10000)
+    return pd.read_csv(csv_filepath, nrows=20000)
 
 
 def preprocess_data(data):
@@ -138,7 +138,8 @@ def preprocess_data(data):
         # Load the pre-trained GloVe model
     # model = api.load("glove-twitter-25")
     # model = api.load("glove-wiki-gigaword-100")
-    model = api.load("glove-wiki-gigaword-200")
+    # model = api.load("glove-wiki-gigaword-300")
+    model = api.load("word2vec-google-news-300")
 
     def encode_text(text, model, max_seq_len=100):
         words = text.split()
@@ -178,7 +179,7 @@ def preprocess_data(data):
 if __name__ == "__main__":
     device = torch.device('cpu')
     classifier = LstmNetwork().to(device)
-    optimizer = optim.Adam(classifier.parameters(), lr=0.005)
+    optimizer = optim.Adam(classifier.parameters(), lr=0.001)
     criterion = nn.BCEWithLogitsLoss()
 
     df = load_dataset('data/reviews/Reviews.csv')
