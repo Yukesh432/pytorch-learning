@@ -4,16 +4,22 @@ import torch.nn as nn
 import torch.utils
 import pandas as pd
 import numpy as np
+
 # from torchnlp.encoders.text import SpacyEncoder, pad_tensor
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
+from bs4 import BeautifulSoup
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+import re
 from tqdm import tqdm
 import torch.optim as optim
-import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 import gensim.downloader as api
+import nltk
+nltk.download('punkt')
+nltk.download('stopwords')
 
 """
 Equation of LSTM cells:
@@ -25,6 +31,7 @@ d. g_t= tanh(Ug*x_t+ Vg*h_(t-1)+ b_g)
 e. C_t= (i_t * g_t)+ f_t* C_(t-1)
 f. h_t= o_t * tanh(C_t) 
 """
+
 
 
 class CustomLSTM(nn.Module):
@@ -119,7 +126,7 @@ def preprocess_data(data):
     df= df[df['Score']!= 3]
 
     df['Score']= df['Score'].apply(lambda i: 'positive' if i> 4 else 'negative')
-    df['Text']= df['Text'].apply(lambda x: x.lower())
+    df['Text'] = df['Text'].apply(lambda x: preprocess_text(x))
 
     df.columns= ['labels', 'text']
     idx_positive= df[df['labels']=='positive'].index
@@ -168,11 +175,22 @@ def preprocess_data(data):
 
     # for batch_idx, batch in enumerate(train_loader):
     #     print("Batch:", batch_idx + 1)
-        
-
 
     return train_loader, test_loader
 
+def preprocess_text(text):
+    # Convert to lowercase
+    text = text.lower()
+    # Remove HTML tags
+    text = BeautifulSoup(text, "html.parser").get_text()
+    # Remove non-alphanumeric characters
+    text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
+    # Tokenize text
+    words = word_tokenize(text)
+    # Remove stopwords
+    stop_words = set(stopwords.words('english'))
+    words = [word for word in words if word not in stop_words]
+    return ' '.join(words)
 
 
 
