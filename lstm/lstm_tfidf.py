@@ -35,7 +35,7 @@ f. h_t= o_t * tanh(C_t)
 """
 
 NUM_DATA= 10000
-EPOCHS= 500
+EPOCHS= 5
 LR_RATE= 0.001
 DROPOUT= 0.5
 NUM_LAYERS= 2
@@ -210,6 +210,8 @@ def log_params(params):
 if __name__ == "__main__":
     
     os.makedirs('figs', exist_ok=True)
+    os.makedirs('lcurve', exist_ok=True)
+
     mlflow.set_experiment("lstm-tfidf")
     device = torch.device('cpu')
 
@@ -300,16 +302,20 @@ if __name__ == "__main__":
         plt.ylabel('Loss')
         plt.legend()
         plt.title('Training and Test Loss')
-        plt.show()
+        lcurve_filename= f"./lcurve/loss_curve_{run_id}.png"
+        plt.savefig(lcurve_filename)
+        # plt.show()
+        mlflow.log_artifact(lcurve_filename)
 
         # Confusion matrix
         cm = confusion_matrix(all_labels, all_preds)
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Negative', 'Positive'])
         disp.plot(cmap=plt.cm.Blues)
         plt.title('Confusion Matrix')
-        plt.show()
+        
         cm_filename = f"./figs/confusion_matrix_{run_id}.png"
         plt.savefig(cm_filename)
+        # plt.show()
         mlflow.log_artifact(cm_filename)
 
         mlflow.pytorch.log_model(classifier, "model")

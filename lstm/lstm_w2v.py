@@ -32,7 +32,7 @@ f. h_t= o_t * tanh(C_t)
 """
 
 NUM_DATA= 100
-EPOCHS= 9
+EPOCHS= 11
 LR_RATE= 0.01
 DROPOUT= 0.3
 NUM_LAYERS= 6
@@ -310,15 +310,15 @@ if __name__ == "__main__":
 
         mlflow.pytorch.log_model(classifier, "model")
 
-        # # Plotting training and test loss curves
-        # plt.figure(figsize=(10, 5))
-        # plt.plot(train_losses, label='Train Loss')
-        # plt.plot(test_losses, label='Test Loss')
-        # plt.xlabel('Epochs')
-        # plt.ylabel('Loss')
-        # plt.legend()
-        # plt.title('Training and Test Loss')
-        # plot_filename = f"loss_curve_{run_id}.png"
-        # plt.savefig(plot_filename)
-        # # plt.show()
-        # mlflow.log_artifact(plot_filename)
+        # Plotting training and test loss curves
+        plt.figure(figsize=(10, 5))
+        plt.plot(train_losses, label='Train Loss')
+        plt.plot(test_losses, label='Test Loss')
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.title('Training and Test Loss')
+        plot_filename = f"loss_curve_{run_id}.png"
+        plt.savefig(plot_filename)
+        # plt.show()
+        mlflow.log_artifact(plot_filename)
