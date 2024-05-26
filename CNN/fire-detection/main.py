@@ -5,7 +5,7 @@ from data_loader import load_data
 from model import train_model, initialize_model, evaluate_model, plot_confusion_matrix
 
 def main():
-    data_dir = 'C:/Users/AIXI/OneDrive/Desktop/projects/pytorch-learning/CNN/data/Fire-Detection'
+    data_dir = '/path/Fire-Detection'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("devide is ...................", device)
     
