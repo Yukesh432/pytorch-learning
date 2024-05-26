@@ -1,7 +1,4 @@
-import torch
 import torch.nn as nn
-import torch.optim as optim
-import torch.utils.data as data
 
 class CharModel(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, output_size, dropout_rate):

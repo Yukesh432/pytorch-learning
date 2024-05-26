@@ -1,6 +1,5 @@
 import torch
 import numpy as np
-from tqdm import tqdm
 from model import *
 from load_data import *
 
