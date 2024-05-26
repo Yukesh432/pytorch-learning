@@ -183,7 +183,6 @@ def preprocess_data(data):
 
     train_loader= torch.utils.data.DataLoader(ds_train, batch_size=BATCH_SIZE, shuffle=True)
     test_loader= torch.utils.data.DataLoader(ds_test, batch_size=BATCH_SIZE, shuffle=True)
-    # print(len(X_test))
 
     # for batch_idx, batch in enumerate(train_loader):
     #     print("Batch:", batch_idx + 1, batch)
@@ -198,6 +197,7 @@ def preprocess_text(text):
 
     text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
 
+    #word tokenizer
     words = word_tokenize(text)
 
     stop_words = set(stopwords.words('english'))
