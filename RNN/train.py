@@ -1,9 +1,11 @@
+# Ref: https://pytorch.org/tutorials/intermediate/char_rnn_classification_tutorial.html
+
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from main import ALL_LETTERS, NUM_LETTERS
-from main import load_data, letter_to_tensor, line_to_tensor, random_training_example
+from main import NUM_LETTERS
+from main import load_data, line_to_tensor, random_training_example
 
 class RNN(nn.Module):
     
@@ -71,7 +73,7 @@ if __name__=="__main__":
     current_loss= 0.0
     all_losses= []
     plot_steps, print_steps= 1000, 5000
-    n_iters= 100000
+    n_iters= 10000
 
     for i in tqdm(range(n_iters)):
         category, line, category_tensor, line_tensor= random_training_example(category_lines, all_categories)
@@ -90,3 +92,11 @@ if __name__=="__main__":
     plt.figure()
     plt.plot(all_losses)
     plt.show()
+
+
+    while True:
+        sentence = input("Input:")
+        if sentence == "quit":
+            break
+        
+        predict(sentence)
