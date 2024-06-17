@@ -16,7 +16,7 @@ from sklearn.naive_bayes import MultinomialNB, ComplementNB, BernoulliNB, Gaussi
 import gensim.downloader as api
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from nltk.stem import PorterStemmer
-
+from sklearn.model_selection import GridSearchCV
 nltk.download('punkt')
 nltk.download('stopwords')
 
@@ -33,10 +33,10 @@ Embedding models:
 
 NUM_DATA = 1000
 BATCH_SIZE = 16
-EMBEDDING_MODEL= 'fasttext-wiki-news-subwords-300'
+EMBEDDING_MODEL= 'glove-twitter-25'
 # EMBEDDING_DIM= 300
 MAX_SEQ_LEN= 1000
-MODEL= 'BernoulliNB'
+MODEL= MultinomialNB
 
 STOP_WORDS = set(stopwords.words('english'))
 
@@ -45,13 +45,13 @@ def load_dataset(csv_filepath):
 
 def preprocess_text(text):
     text = text.lower()
-    text = text.replace(",", "000000").replace("000", "m").replace("000", "k").replace("", "").replace("", "")
-    text = text.replace("won't", "will not").replace("cannot", "can not").replace("can't", "can not")
-    text = text.replace("n't", " not").replace("what's", "what is").replace("it's", "it is")
-    text = text.replace("'ve", " have").replace("i'm", "i am").replace("'re", " are")
-    text = text.replace("he's", "he is").replace("she's", "she is").replace("'s", " own")
-    text = text.replace("%", " percent ").replace("₹", " rupee ").replace("$", " dollar ")
-    text = text.replace("€", " euro ").replace("'ll", " will")
+    # text = text.replace(",", "000000").replace("000", "m").replace("000", "k").replace("", "").replace("", "")
+    # text = text.replace("won't", "will not").replace("cannot", "can not").replace("can't", "can not")
+    # text = text.replace("n't", " not").replace("what's", "what is").replace("it's", "it is")
+    # text = text.replace("'ve", " have").replace("i'm", "i am").replace("'re", " are")
+    # text = text.replace("he's", "he is").replace("she's", "she is").replace("'s", " own")
+    # text = text.replace("%", " percent ").replace("₹", " rupee ").replace("$", " dollar ")
+    # text = text.replace("€", " euro ").replace("'ll", " will")
     text = re.sub(r'([0-9]+)000000', r'\1m', text)
     text = re.sub(r'([0-9]+)000', r'\1k', text)
 
@@ -132,25 +132,34 @@ if __name__ == "__main__":
     df = load_dataset(settings.DATA_PATH)
     X_train, X_test, y_train, y_test = preprocess_data(df)
 
-    # classifier = MultinomialNB()
-    classifier= MODEL()
-    classifier.fit(X_train, y_train)
 
-    train_preds = classifier.predict(X_train)
-    test_preds = classifier.predict(X_test)
-    train_probs = classifier.predict_proba(X_train)
-    test_probs = classifier.predict_proba(X_test)
+    param_grid= {
+        # 'var_smoothing': np.logspace(0, -9, num=10),
+        'alpha': [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9, 1.0],
+        'fit_prior': [True, False]
+    }
+
+    grid_search= GridSearchCV(MODEL(), param_grid, cv=5, scoring='accuracy', n_jobs=-1, return_train_score=True)
+    grid_search.fit(X_train, y_train)
+
+    best_model= grid_search.best_estimator_
+    
+    train_preds = best_model.predict(X_train)
+    test_preds = best_model.predict(X_test)
+    train_probs = best_model.predict_proba(X_train)
+    test_probs = best_model.predict_proba(X_test)
 
     train_loss = log_loss(y_train, train_probs)
     test_loss = log_loss(y_test, test_probs)
     train_accuracy = accuracy_score(y_train, train_preds)
     test_accuracy = accuracy_score(y_test, test_preds)
 
-    run_name = f"model_{MODEL}_NB_ND{NUM_DATA}_BS{BATCH_SIZE}_EMB_{EMBEDDING_MODEL}_MSQL{MAX_SEQ_LEN}"
+    run_name = f"model_{MODEL.__name__}_ND{NUM_DATA}_BS{BATCH_SIZE}_EMB_{EMBEDDING_MODEL}_MSQL{MAX_SEQ_LEN}"
 
     with mlflow.start_run(run_name=run_name) as run:
         params = {
-            "batch_size": BATCH_SIZE
+            "batch_size": BATCH_SIZE,
+            "best-params": grid_search.best_params_
         }
         log_params(params)
         run_id = run.info.run_id
@@ -165,24 +174,42 @@ if __name__ == "__main__":
             "test_accuracy": test_accuracy
         })
 
-        plt.figure(figsize=(10, 5))
-        plt.plot([train_loss], label='Train Loss')
-        plt.plot([test_loss], label='Test Loss')
-        plt.xlabel('Epochs')
-        plt.ylabel('Loss')
-        plt.legend()
-        plt.title('Training and Test Loss')
-        lcurve_filename= f"./lcurve/loss_curve_{run_id}.png"
-        plt.savefig(lcurve_filename)
-        mlflow.log_artifact(lcurve_filename)
+        results= grid_search.cv_results_
+        param_names= list(param_grid.keys())
+
+        for param_name in param_names:
+            param_values = results[f'param_{param_name}']
+            train_scores = results['mean_train_score']
+            test_scores = results['mean_test_score']
+
+            # Log each parameter set's metrics
+            for i, param_value in enumerate(param_values):
+                param_str = f"{param_name}_{param_value}".replace('.', '_')
+                mlflow.log_metrics({
+                    f"train_accuracy_{param_str}": train_scores[i],
+                    f"test_accuracy_{param_str}": test_scores[i]
+                })
+
+            # Plotting train and test scores
+            plt.figure(figsize=(10, 5))
+            plt.plot(param_values, train_scores, label='Train Accuracy', marker='o')
+            plt.plot(param_values, test_scores, label='Test Accuracy', marker='o')
+            plt.xlabel(param_name)
+            plt.ylabel('Accuracy')
+            plt.xscale('log' if param_name == 'var_smoothing' else 'linear')
+            plt.legend()
+            plt.title(f'Train and Test Accuracy vs {param_name}')
+            plot_filename = f"./figures/accuracy_vs_{param_name}_{run_id}.png"
+            plt.savefig(plot_filename)
+            mlflow.log_artifact(plot_filename)
 
         cm = confusion_matrix(y_test, test_preds)
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Negative', 'Positive'])
         disp.plot(cmap=plt.cm.Blues)
         plt.title('Confusion Matrix')
         
-        cm_filename = f"./figs/confusion_matrix_{run_id}.png"
+        cm_filename = f"./figures/confusion_matrix_{run_id}.png"
         plt.savefig(cm_filename)
         mlflow.log_artifact(cm_filename)
 
-        mlflow.sklearn.log_model(classifier, "model")
+        mlflow.sklearn.log_model(best_model, "model")
