@@ -111,13 +111,13 @@ if __name__ == "__main__":
 
     # Define parameter grid for hyperparameter tuning
     param_grid = {
-        'n_estimators': [100, 200, 300],
+        'n_estimators': [200, 300, 500],
         'learning_rate': [0.01, 0.1, 0.2],
         'max_depth': [3, 4, 5],
-        'min_samples_split': [2, 5, 10],
+        # 'min_samples_split': [2, 5, 10],
         # 'min_samples_leaf': [1, 2, 4],
         # 'subsample': [0.8, 1.0],
-        'max_features': ['auto', 'sqrt', 'log2']
+        # 'max_features': ['auto', 'sqrt', 'log2']
     }
 
     run_name = f"model_{MODEL.__name__}_GB_ND{NUM_DATA}_BS{BATCH_SIZE}"
