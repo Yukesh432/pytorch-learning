@@ -212,10 +212,7 @@ def train_knowledge_distillation(teacher, student, train_loader, epochs, learnin
         The student model to be trained.
     train_loader : torch.utils.data.DataLoader
         DataLoader containing training data batches.
-    epochs : int
-        Number of training epochs.
-    learning_rate : float
-        Learning rate for the optimizer.
+        
     T : float
         Temperature for softmax in knowledge distillation, controlling the softness of probability distribution.
     soft_target_loss_weight : float
