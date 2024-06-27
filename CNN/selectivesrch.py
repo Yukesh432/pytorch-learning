@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-image_path= '/home/aixi/windows/projects/pytorch modules/CNN/data/rocket.jpg'
+image_path= 'path'
 # images= os.listdir(image_path)
 
 
